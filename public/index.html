@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aegis | Premium Hostel Management Dashboard</title>
+  <meta name="description" content="A state-of-the-art management system for university and private hostels. Connects directly to MySQL for secure, real-time administration.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+  <!-- DB Error Overlay -->
+  <div id="db-error-overlay" class="overlay hidden">
+    <div class="error-card">
+      <div class="error-icon"><i class="fa-solid fa-database-slash"></i></div>
+      <h2>Database Offline</h2>
+      <p id="db-error-msg">Could not establish a connection to the MySQL database. Please verify your settings.</p>
+      <div class="troubleshoot">
+        <h4>Troubleshooting Checklist:</h4>
+        <ul>
+          <li><i class="fa-solid fa-circle-check"></i> Ensure MySQL is running (e.g. XAMPP, WAMP, Docker).</li>
+          <li><i class="fa-solid fa-circle-check"></i> Verify database name is <code>hostel_management_system</code>.</li>
+          <li><i class="fa-solid fa-circle-check"></i> Check <code>.env</code> file credentials inside project root.</li>
+        </ul>
+      </div>
+      <button class="btn btn-primary" onclick="window.location.reload()"><i class="fa-solid fa-arrows-rotate"></i> Retry Connection</button>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-container"></div>
+
+  <!-- Main App Layout -->
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo-area">
+        <div class="logo-icon"><i class="fa-solid fa-shield-halved"></i></div>
+        <div class="logo-text">
+          <h1>AEGIS</h1>
+          <span>HOSTEL HUBS</span>
+        </div>
+      </div>
+      
+      <nav class="nav-menu">
+        <a href="#" class="nav-link active" data-view="dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+        <a href="#" class="nav-link" data-view="students"><i class="fa-solid fa-graduation-cap"></i> Students</a>
+        <a href="#" class="nav-link" data-view="rooms"><i class="fa-solid fa-door-open"></i> Rooms & Beds</a>
+        <a href="#" class="nav-link" data-view="fees"><i class="fa-solid fa-credit-card"></i> Fee Payments</a>
+        <a href="#" class="nav-link" data-view="complaints"><i class="fa-solid fa-triangle-exclamation"></i> Complaints <span class="badge badge-danger hidden" id="complaints-alert-badge">0</span></a>
+        <a href="#" class="nav-link" data-view="attendance"><i class="fa-solid fa-calendar-check"></i> Attendance</a>
+        <a href="#" class="nav-link" data-view="leaves"><i class="fa-solid fa-envelope-open-text"></i> Leave Requests</a>
+        <a href="#" class="nav-link" data-view="visitors"><i class="fa-solid fa-id-card-clip"></i> Visitor Logs</a>
+        <a href="#" class="nav-link" data-view="staff"><i class="fa-solid fa-user-shield"></i> Staff Members</a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="theme-toggle" id="theme-toggle-btn">
+          <i class="fa-solid fa-moon"></i>
+          <span>Dark Mode</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="main-header">
+        <div class="header-search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="global-search" placeholder="Search students, rooms, or receipts...">
+        </div>
+        <div class="header-profile">
+          <div class="status-indicator">
+            <span class="status-dot online"></span>
+            <span class="status-label">MySQL Connected</span>
+          </div>
+          <div class="profile-info">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="Warden avatar" class="avatar">
+            <div class="profile-text">
+              <h4>System Admin</h4>
+              <span>Warden Office</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- View Containers -->
+      <div class="view-container">
+        
+        <!-- DASHBOARD VIEW -->
+        <section id="dashboard-view" class="content-view">
+          <div class="view-header">
+            <div>
+              <h2>Overview Dashboard</h2>
+              <p>Real-time analytics and quick access hub</p>
+            </div>
+            <div class="current-date" id="live-date">July 25, 2026</div>
+          </div>
+
+          <!-- KPI Grid -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-icon blue"><i class="fa-solid fa-users"></i></div>
+              <div class="kpi-data">
+                <span class="kpi-title">Active Students</span>
+                <h3 id="stat-students">--</h3>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon purple"><i class="fa-solid fa-bed"></i></div>
+              <div class="kpi-data">
+                <span class="kpi-title">Room Occupancy</span>
+                <h3 id="stat-occupancy">-- / --</h3>
+                <div class="progress-bar-container">
+                  <div class="progress-bar" id="occupancy-progress" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon orange"><i class="fa-solid fa-circle-exclamation"></i></div>
+              <div class="kpi-data">
+                <span class="kpi-title">Open Complaints</span>
+                <h3 id="stat-complaints">--</h3>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon green"><i class="fa-solid fa-wallet"></i></div>
+              <div class="kpi-data">
+                <span class="kpi-title">Monthly Collections</span>
+                <h3 id="stat-revenue">LKR 0.00</h3>
+                <span class="due-label" id="stat-due">LKR 0.00 Overdue</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dashboard Charts / Detail Columns -->
+          <div class="dashboard-grid">
+            <!-- Hostel Distributions -->
+            <div class="dashboard-panel">
+              <div class="panel-header">
+                <h3>Hostel Buildings Occupancy</h3>
+                <i class="fa-solid fa-building"></i>
+              </div>
+              <div class="panel-body" id="hostel-distribution-list">
+                <!-- Dynamic hostel distribution list -->
+              </div>
+            </div>
+
+            <!-- Quick Allocations -->
+            <div class="dashboard-panel">
+              <div class="panel-header">
+                <h3>Quick Actions</h3>
+                <i class="fa-solid fa-bolt"></i>
+              </div>
+              <div class="panel-body quick-actions-grid">
+                <button class="action-btn" onclick="openModal('add-student-modal')">
+                  <i class="fa-solid fa-user-plus"></i> Add Student
+                </button>
+                <button class="action-btn" onclick="openModal('allocate-room-modal')">
+                  <i class="fa-solid fa-key"></i> Allocate Room
+                </button>
+                <button class="action-btn" onclick="openModal('pay-fee-modal')">
+                  <i class="fa-solid fa-dollar-sign"></i> Record Payment
+                </button>
+                <button class="action-btn" onclick="openModal('add-complaint-modal')">
+                  <i class="fa-solid fa-comment-medical"></i> Raise Complaint
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- STUDENTS VIEW -->
+        <section id="students-view" class="content-view hidden">
+          <div class="view-header">
+            <div>
+              <h2>Student Directory</h2>
+              <p>Manage resident profiles, registrations, and statuses</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('add-student-modal')"><i class="fa-solid fa-plus"></i> Register Student</button>
+          </div>
+          
+          <div class="filter-bar">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="student-search-input" placeholder="Search by name, ID or email...">
+            </div>
+            <select id="student-status-filter" class="filter-select">
+              <option value="">All Statuses</option>
+              <option value="Active">Active</option>
+              <option value="Vacated">Vacated</option>
+              <option value="Suspended">Suspended</option>
+            </select>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table" id="students-table">
+              <thead>
+                <tr>
+                  <th>Admission No</th>
+                  <th>Full Name</th>
+                  <th>Gender/DOB</th>
+                  <th>Contact Info</th>
+                  <th>Course</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="students-table-body">
+                <!-- Dynamically generated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ROOMS VIEW -->
+        <section id="rooms-view" class="content-view hidden">
+          <div class="view-header">
+            <div>
+              <h2>Rooms & Room Allocation</h2>
+              <p>Manage hostel building inventories, configurations, and allocations</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('allocate-room-modal')"><i class="fa-solid fa-key"></i> New Allocation</button>
+          </div>
+
+          <div class="rooms-tab-headers">
+            <button class="tab-header-btn active" data-rooms-tab="inventory">Room Inventory</button>
+            <button class="tab-header-btn" data-rooms-tab="allocations">Active Allocations</button>
+          </div>
+
+          <!-- Rooms Tab 1: Inventory -->
+          <div id="rooms-inventory-tab" class="rooms-tab-content">
+            <div class="room-grid" id="room-inventory-grid">
+              <!-- Dynamically populated cards -->
+            </div>
+          </div>
+
+          <!-- Rooms Tab 2: Allocations -->
+          <div id="rooms-allocations-tab" class="rooms-tab-content hidden">
+            <div class="table-container">
+              <table class="data-table" id="allocations-table">
+                <thead>
+                  <tr>
+                    <th>Student Name</th>
+                    <th>Admission No</th>
+                    <th>Hostel</th>
+                    <th>Room No</th>
+                    <th>Bed No</th>
+                    <th>Check In Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="allocations-table-body">
+                  <!-- Dynamically generated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- FEES VIEW -->
+        <section id="fees-view" class="content-view hidden">
+          <div class="view-header">
+            <div>
+              <h2>Fee Management & Payments</h2>
+              <p>Record rent, deposits, fines and check outstanding balances</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('pay-fee-modal')"><i class="fa-solid fa-dollar-sign"></i> Record Payment</button>
+          </div>
+
+          <div class="fees-tab-headers">
+            <button class="tab-header-btn active" data-fees-tab="summary">Fee Summary</button>
+            <button class="tab-header-btn" data-fees-tab="history">Payment History</button>
+          </div>
+
+          <!-- Fees Tab 1: Summary -->
+          <div id="fees-summary-tab" class="fees-tab-content">
+            <div class="table-container">
+              <table class="data-table" id="fee-summary-table">
+                <thead>
+                  <tr>
+                    <th>Admission No</th>
+                    <th>Student Name</th>
+                    <th>Total Paid</th>
+                    <th>Total Due</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="fee-summary-table-body">
+                  <!-- Dynamically populated from view -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Fees Tab 2: Payment History -->
+          <div id="fees-history-tab" class="fees-tab-content hidden">
+            <div class="table-container">
+              <table class="data-table" id="payment-history-table">
+                <thead>
+                  <tr>
+                    <th>Receipt No</th>
+                    <th>Student Name</th>
+                    <th>Fee Type</th>
+                    <th>Amount</th>
+                    <th>Month For</th>
+                    <th>Payment Mode</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="payment-history-table-body">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- COMPLAINTS VIEW -->
+        <section id="complaints-view" class="content-view hidden">
+          <div class="view-header">
+            <div>
+              <h2>Complaints & Maintenance Requests</h2>
+              <p>Resolve student issues, track maintenance works and assign staff</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('add-complaint-modal')"><i class="fa-solid fa-plus"></i> File Complaint</button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table" id="complaints-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Student Name</th>
+                  <th>Room No</th>
+                  <th>Description</th>
+                  <th>Date Raised</th>
+                  <th>Assigned Staff</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="complaints-table-body">
+                <!-- Dynamically generated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ATTENDANCE VIEW -->
+        <section id="attendance-view" class="content-view hidden">
+          <div class="view-header">
+            <div>
+              <h2>Daily Attendance Tracker</h2>
+              <p>Mark daily rolls and keep registers updated for students</p>
+            </div>
+            <div class="attendance-controls">
+              <input type="date" id="attendance-datepicker" class="input-field">
+              <button class="btn btn-success" id="save-attendance-btn"><i class="fa-solid fa-save"></i> Save Attendance</button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table" id="attendance-table">
+              <thead>
+                <tr>
+                  <th>Admission No</th>
+                  <th>Student Name</th>
+                  <th>Roll Status</th>
+                  <th>Last Marked By</th>
+                </tr>
+              </thead>
+              <tbody id="attendance-table-body">
+                <!-- Dynamically generated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- LEAVES VIEW -->
+        <section id="leaves-view" class="content-view hidden">
+          <div class="view-header">
+            <div>
+              <h2>Student Outing & Leave Applications</h2>
+              <p>Approve or reject leave application requests from students</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('apply-leave-modal')"><i class="fa-solid fa-paper-plane"></i> Apply for Leave</button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table" id="leaves-table">
+              <thead>
+                <tr>
+                  <th>Student Name</th>
+                  <th>Admission No</th>
+                  <th>Duration</th>
+                  <th>Reason</th>
+                  <th>Applied Date</th>
+                  <th>Approved By</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="leaves-table-body">
+                <!-- Dynamically generated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- VISITORS VIEW -->
+        <section id="visitors-view" class="content-view hidden">
+          <div class="view-header">
+            <div>
+              <h2>Visitor Registry Logs</h2>
+              <p>Log visitors, check times, and monitor premises security</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('add-visitor-modal')"><i class="fa-solid fa-plus"></i> Check-in Visitor</button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table" id="visitors-table">
+              <thead>
+                <tr>
+                  <th>Visitor Name</th>
+                  <th>Student Visited</th>
+                  <th>Relation</th>
+                  <th>Phone No</th>
+                  <th>Visit Date</th>
+                  <th>Check In</th>
+                  <th>Check Out</th>
+                  <th>Purpose</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="visitors-table-body">
+                <!-- Dynamically generated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- STAFF VIEW -->
+        <section id="staff-view" class="content-view hidden">
+          <div class="view-header">
+            <div>
+              <h2>Staff Roster</h2>
+              <p>Manage hostel personnel, wardens, cleaners, cooks and guards</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('add-staff-modal')"><i class="fa-solid fa-plus"></i> Add Staff</button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table" id="staff-table">
+              <thead>
+                <tr>
+                  <th>Staff ID</th>
+                  <th>Full Name</th>
+                  <th>Designation</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Hostel Assigned</th>
+                  <th>Joined Date</th>
+                  <th>Salary</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="staff-table-body">
+                <!-- Dynamically generated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ==========================================
+       MODALS SYSTEM
+       ========================================== -->
+  
+  <!-- Add/Edit Student Modal -->
+  <div id="add-student-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Register New Student</h3>
+        <button class="close-btn" onclick="closeModal('add-student-modal')">&times;</button>
+      </div>
+      <form id="student-form" class="modal-body">
+        <input type="hidden" id="student-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="student-admission-no">Admission No *</label>
+            <input type="text" id="student-admission-no" required placeholder="e.g. HS2026004">
+          </div>
+          <div class="form-group">
+            <label for="student-full-name">Full Name *</label>
+            <input type="text" id="student-full-name" required placeholder="Full Name">
+          </div>
+          <div class="form-group">
+            <label for="student-gender">Gender *</label>
+            <select id="student-gender" required>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="student-dob">Date of Birth</label>
+            <input type="date" id="student-dob">
+          </div>
+          <div class="form-group">
+            <label for="student-phone">Phone Number *</label>
+            <input type="tel" id="student-phone" required placeholder="Phone Number">
+          </div>
+          <div class="form-group">
+            <label for="student-email">Email Address</label>
+            <input type="email" id="student-email" placeholder="Email Address">
+          </div>
+          <div class="form-group">
+            <label for="student-course">Course</label>
+            <input type="text" id="student-course" placeholder="e.g. BSc Computer Science">
+          </div>
+          <div class="form-group">
+            <label for="student-year-of-study">Year of Study</label>
+            <input type="number" id="student-year-of-study" min="1" max="5" value="1">
+          </div>
+          <div class="form-group span-2">
+            <label for="student-address">Address</label>
+            <input type="text" id="student-address" placeholder="Residential Address">
+          </div>
+          <div class="form-group">
+            <label for="student-guardian-name">Guardian Name</label>
+            <input type="text" id="student-guardian-name" placeholder="Guardian Name">
+          </div>
+          <div class="form-group">
+            <label for="student-guardian-phone">Guardian Phone</label>
+            <input type="tel" id="student-guardian-phone" placeholder="Guardian Phone">
+          </div>
+          <div class="form-group hidden" id="student-status-group">
+            <label for="student-status">Status</label>
+            <select id="student-status">
+              <option value="Active">Active</option>
+              <option value="Vacated">Vacated</option>
+              <option value="Suspended">Suspended</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('add-student-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Student</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Allocate Room Modal -->
+  <div id="allocate-room-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Allocate Room / Bed</h3>
+        <button class="close-btn" onclick="closeModal('allocate-room-modal')">&times;</button>
+      </div>
+      <form id="allocate-form" class="modal-body">
+        <div class="form-group">
+          <label for="allocate-student-id">Select Student *</label>
+          <select id="allocate-student-id" required class="input-field">
+            <option value="">-- Choose Student --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="allocate-room-id">Select Room (Hostel - Room No) *</label>
+          <select id="allocate-room-id" required class="input-field">
+            <option value="">-- Choose Room --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="allocate-bed-number">Bed Number *</label>
+          <input type="number" id="allocate-bed-number" required min="1" max="10" placeholder="e.g. 1">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('allocate-room-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Allocate Bed</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Record Fee Payment Modal -->
+  <div id="pay-fee-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Record Fee Payment</h3>
+        <button class="close-btn" onclick="closeModal('pay-fee-modal')">&times;</button>
+      </div>
+      <form id="pay-fee-form" class="modal-body">
+        <div class="form-grid">
+          <div class="form-group span-2">
+            <label for="fee-student-id">Select Student *</label>
+            <select id="fee-student-id" required class="input-field">
+              <option value="">-- Choose Student --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="fee-type">Fee Type *</label>
+            <select id="fee-type" required>
+              <option value="Room Rent">Room Rent</option>
+              <option value="Mess Fee">Mess Fee</option>
+              <option value="Security Deposit">Security Deposit</option>
+              <option value="Fine">Fine</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="fee-amount">Amount (LKR) *</label>
+            <input type="number" step="0.01" id="fee-amount" required placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label for="fee-payment-mode">Payment Mode *</label>
+            <select id="fee-payment-mode" required>
+              <option value="UPI">UPI</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Card">Card</option>
+              <option value="Cheque">Cheque</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="fee-month-for">Month For</label>
+            <input type="text" id="fee-month-for" placeholder="e.g. July 2026">
+          </div>
+          <div class="form-group">
+            <label for="fee-receipt-no">Receipt No (Auto-generated if empty)</label>
+            <input type="text" id="fee-receipt-no" placeholder="e.g. RCPT-0004">
+          </div>
+          <div class="form-group">
+            <label for="fee-status">Status</label>
+            <select id="fee-status">
+              <option value="Paid">Paid</option>
+              <option value="Pending">Pending</option>
+              <option value="Overdue">Overdue</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('pay-fee-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Record Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Raise Complaint Modal -->
+  <div id="add-complaint-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Raise Complaint</h3>
+        <button class="close-btn" onclick="closeModal('add-complaint-modal')">&times;</button>
+      </div>
+      <form id="complaint-form" class="modal-body">
+        <div class="form-group">
+          <label for="complaint-student-id">Select Student *</label>
+          <select id="complaint-student-id" required class="input-field">
+            <option value="">-- Choose Student --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="complaint-room-id">Select Room (Optional)</label>
+          <select id="complaint-room-id" class="input-field">
+            <option value="">-- None / Select Room --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="complaint-category">Category *</label>
+          <select id="complaint-category" required>
+            <option value="Electrical">Electrical</option>
+            <option value="Plumbing">Plumbing</option>
+            <option value="Furniture">Furniture</option>
+            <option value="Cleanliness">Cleanliness</option>
+            <option value="Internet">Internet</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="complaint-description">Description *</label>
+          <textarea id="complaint-description" rows="3" required placeholder="Brief description of the issue..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="complaint-assigned-staff-id">Assign Staff (Optional)</label>
+          <select id="complaint-assigned-staff-id" class="input-field">
+            <option value="">-- Unassigned --</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('add-complaint-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">File Complaint</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Assign Staff Modal -->
+  <div id="assign-staff-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3>Assign Staff</h3>
+        <button class="close-btn" onclick="closeModal('assign-staff-modal')">&times;</button>
+      </div>
+      <form id="assign-staff-form" class="modal-body">
+        <input type="hidden" id="assign-complaint-id">
+        <div class="form-group">
+          <label for="assign-staff-select">Select Staff Member *</label>
+          <select id="assign-staff-select" required class="input-field">
+            <!-- Dynamic staff options -->
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('assign-staff-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Assign Member</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Staff Modal -->
+  <div id="add-staff-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Add Staff Member</h3>
+        <button class="close-btn" onclick="closeModal('add-staff-modal')">&times;</button>
+      </div>
+      <form id="staff-form" class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="staff-full-name">Full Name *</label>
+            <input type="text" id="staff-full-name" required placeholder="Full Name">
+          </div>
+          <div class="form-group">
+            <label for="staff-designation">Designation *</label>
+            <select id="staff-designation" required>
+              <option value="Warden">Warden</option>
+              <option value="Assistant Warden">Assistant Warden</option>
+              <option value="Security">Security</option>
+              <option value="Cleaner">Cleaner</option>
+              <option value="Cook">Cook</option>
+              <option value="Accountant">Accountant</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="staff-phone">Phone Number *</label>
+            <input type="tel" id="staff-phone" required placeholder="Phone Number">
+          </div>
+          <div class="form-group">
+            <label for="staff-email">Email Address</label>
+            <input type="email" id="staff-email" placeholder="Email Address">
+          </div>
+          <div class="form-group">
+            <label for="staff-hostel-id">Hostel Assigned</label>
+            <select id="staff-hostel-id">
+              <option value="">-- Unassigned --</option>
+              <option value="1">Sunrise Boys Hostel</option>
+              <option value="2">Moonlight Girls Hostel</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="staff-salary">Salary (LKR)</label>
+            <input type="number" step="0.01" id="staff-salary" placeholder="Salary Amount">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('add-staff-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Member</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Apply Leave Modal -->
+  <div id="apply-leave-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Apply for Leave</h3>
+        <button class="close-btn" onclick="closeModal('apply-leave-modal')">&times;</button>
+      </div>
+      <form id="leave-form" class="modal-body">
+        <div class="form-group">
+          <label for="leave-student-id">Select Student *</label>
+          <select id="leave-student-id" required class="input-field">
+            <option value="">-- Choose Student --</option>
+          </select>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="leave-from-date">From Date *</label>
+            <input type="date" id="leave-from-date" required>
+          </div>
+          <div class="form-group">
+            <label for="leave-to-date">To Date *</label>
+            <input type="date" id="leave-to-date" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="leave-reason">Reason *</label>
+          <textarea id="leave-reason" rows="3" required placeholder="Describe reason for leave..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('apply-leave-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit Application</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Check Out Leave Modal (Approving Warden) -->
+  <div id="approve-leave-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3>Approve Leave Request</h3>
+        <button class="close-btn" onclick="closeModal('approve-leave-modal')">&times;</button>
+      </div>
+      <form id="approve-leave-form" class="modal-body">
+        <input type="hidden" id="approve-leave-id">
+        <input type="hidden" id="approve-leave-status">
+        <div class="form-group">
+          <label for="approve-warden-select">Approving Warden *</label>
+          <select id="approve-warden-select" required class="input-field">
+            <!-- Dynamic wardens list -->
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('approve-leave-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Confirm Decisions</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Visitor Modal -->
+  <div id="add-visitor-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Check-in Visitor</h3>
+        <button class="close-btn" onclick="closeModal('add-visitor-modal')">&times;</button>
+      </div>
+      <form id="visitor-form" class="modal-body">
+        <div class="form-group">
+          <label for="visitor-student-id">Visiting Student *</label>
+          <select id="visitor-student-id" required class="input-field">
+            <option value="">-- Choose Student --</option>
+          </select>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="visitor-visitor-name">Visitor Name *</label>
+            <input type="text" id="visitor-visitor-name" required placeholder="Visitor Full Name">
+          </div>
+          <div class="form-group">
+            <label for="visitor-relation">Relation to Student</label>
+            <input type="text" id="visitor-relation" placeholder="e.g. Father, Mother, Friend">
+          </div>
+          <div class="form-group">
+            <label for="visitor-phone">Visitor Phone *</label>
+            <input type="tel" id="visitor-phone" required placeholder="Visitor Phone Number">
+          </div>
+          <div class="form-group">
+            <label for="visitor-purpose">Purpose of Visit</label>
+            <input type="text" id="visitor-purpose" placeholder="e.g. Outing pickup, Delivery, Fee deposit">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('add-visitor-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Check In</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
