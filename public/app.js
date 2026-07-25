@@ -8,6 +8,8 @@ const API_BASE = '/api';
 const state = {
   activeView: 'dashboard',
   theme: 'dark',
+  token: localStorage.getItem('aegis_admin_token') || null,
+  currentUser: null,
   students: [],
   rooms: [],
   staff: [],
@@ -21,9 +23,241 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   setupNavigation();
   setupEventListeners();
-  checkDatabaseConnection();
+  setupAuthEventListeners();
+  setupMobileDrawer();
+  checkAuth();
   startLiveDate();
 });
+
+// Authentication Checker
+async function checkAuth() {
+  const token = localStorage.getItem('aegis_admin_token');
+  if (!token) {
+    showAuthView();
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const data = await res.json();
+    if (data.success && data.user) {
+      state.currentUser = data.user;
+      state.token = token;
+      updateProfileUI(data.user);
+      showMainLayout();
+    } else {
+      clearAuth();
+      showAuthView();
+    }
+  } catch (err) {
+    console.error('Auth verification check:', err);
+    // If backend endpoint reachable but auth fails or offline
+    showAuthView();
+  }
+}
+
+function updateProfileUI(user) {
+  const nameEl = document.getElementById('header-user-name');
+  const roleEl = document.getElementById('header-user-role');
+  if (nameEl) nameEl.textContent = user.full_name || 'System Admin';
+  if (roleEl) roleEl.textContent = user.role || 'Hostel Admin';
+}
+
+function showAuthView() {
+  const authContainer = document.getElementById('auth-container');
+  const mainLayout = document.getElementById('app-main-layout');
+  if (authContainer) authContainer.classList.remove('hidden');
+  if (mainLayout) mainLayout.classList.add('hidden');
+}
+
+function showMainLayout() {
+  const authContainer = document.getElementById('auth-container');
+  const mainLayout = document.getElementById('app-main-layout');
+  if (authContainer) authContainer.classList.add('hidden');
+  if (mainLayout) mainLayout.classList.remove('hidden');
+  switchView(state.activeView);
+}
+
+function clearAuth() {
+  localStorage.removeItem('aegis_admin_token');
+  state.token = null;
+  state.currentUser = null;
+}
+
+// Authentication Forms & User Session Handlers
+function setupAuthEventListeners() {
+  // Toggle Password Visibility
+  document.querySelectorAll('.btn-toggle-password').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      if (input) {
+        if (input.type === 'password') {
+          input.type = 'text';
+          btn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+        } else {
+          input.type = 'password';
+          btn.innerHTML = '<i class="fa-solid fa-eye"></i>';
+        }
+      }
+    });
+  });
+
+  // Switch between Login and Register views
+  const switchReg = document.getElementById('switch-to-register');
+  const switchLogin = document.getElementById('switch-to-login');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const authSubtitle = document.getElementById('auth-subtitle');
+
+  if (switchReg) {
+    switchReg.addEventListener('click', (e) => {
+      e.preventDefault();
+      loginForm.classList.add('hidden');
+      registerForm.classList.remove('hidden');
+      if (authSubtitle) authSubtitle.textContent = 'Create a new admin account to manage Aegis Hostel Hubs.';
+    });
+  }
+
+  if (switchLogin) {
+    switchLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      registerForm.classList.add('hidden');
+      loginForm.classList.remove('hidden');
+      if (authSubtitle) authSubtitle.textContent = 'Welcome back! Sign in to access the hostel administration panel.';
+    });
+  }
+
+  // Submit Login Form
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const btn = document.getElementById('btn-login-submit');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing In...';
+
+      try {
+        const response = await fetch(`${API_BASE}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const res = await response.json();
+
+        if (res.success) {
+          localStorage.setItem('aegis_admin_token', res.token);
+          state.token = res.token;
+          state.currentUser = res.user;
+          updateProfileUI(res.user);
+          showToast('Welcome back, ' + res.user.full_name + '!', 'success');
+          showMainLayout();
+          loginForm.reset();
+        } else {
+          showToast(res.error || 'Invalid credentials', 'error');
+        }
+      } catch (err) {
+        showToast('Login failed. Please check server connection.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Sign in';
+      }
+    });
+  }
+
+  // Submit Register Form
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const full_name = document.getElementById('reg-fullname').value;
+      const email = document.getElementById('reg-email').value;
+      const password = document.getElementById('reg-password').value;
+      const confirmPassword = document.getElementById('reg-confirm-password').value;
+      const btn = document.getElementById('btn-register-submit');
+
+      if (password !== confirmPassword) {
+        showToast('Passwords do not match!', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating Account...';
+
+      try {
+        const response = await fetch(`${API_BASE}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ full_name, email, password })
+        });
+        const res = await response.json();
+
+        if (res.success) {
+          localStorage.setItem('aegis_admin_token', res.token);
+          state.token = res.token;
+          state.currentUser = res.user;
+          updateProfileUI(res.user);
+          showToast('Admin account registered successfully!', 'success');
+          showMainLayout();
+          registerForm.reset();
+        } else {
+          showToast(res.error || 'Registration failed', 'error');
+        }
+      } catch (err) {
+        showToast('Registration error. Please try again.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Create account';
+      }
+    });
+  }
+
+  // Logout actions
+  const logoutHeaderBtn = document.getElementById('logout-btn');
+  const logoutSidebarBtn = document.getElementById('sidebar-logout-btn');
+
+  const handleLogout = () => {
+    clearAuth();
+    showAuthView();
+    showToast('Logged out successfully', 'success');
+  };
+
+  if (logoutHeaderBtn) logoutHeaderBtn.addEventListener('click', handleLogout);
+  if (logoutSidebarBtn) logoutSidebarBtn.addEventListener('click', handleLogout);
+}
+
+// Mobile Navigation Drawer Setup
+function setupMobileDrawer() {
+  const toggleBtn = document.getElementById('mobile-menu-toggle');
+  const closeBtn = document.getElementById('close-sidebar-btn');
+  const sidebar = document.getElementById('sidebar-menu');
+  const overlay = document.getElementById('sidebar-overlay');
+
+  const openDrawer = () => {
+    if (sidebar) sidebar.classList.add('mobile-open');
+    if (overlay) overlay.classList.add('active');
+  };
+
+  const closeDrawer = () => {
+    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (overlay) overlay.classList.remove('active');
+  };
+
+  if (toggleBtn) toggleBtn.addEventListener('click', openDrawer);
+  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  if (overlay) overlay.addEventListener('click', closeDrawer);
+
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+      closeDrawer();
+    });
+  });
+}
 
 // Theme Setup
 function initTheme() {
@@ -1259,3 +1493,17 @@ function startLiveDate() {
   update();
   setInterval(update, 60000);
 }
+
+// Interactive Pure JS Background Parallax Movement
+document.addEventListener('mousemove', (e) => {
+  const authContainer = document.getElementById('auth-container');
+  if (authContainer && !authContainer.classList.contains('hidden')) {
+    const x = (e.clientX / window.innerWidth - 0.5) * 30;
+    const y = (e.clientY / window.innerHeight - 0.5) * 30;
+    const orbs = authContainer.querySelectorAll('.decor-orb');
+    orbs.forEach((orb, idx) => {
+      const depth = (idx + 1) * 0.4;
+      orb.style.transform = `translate(${x * depth}px, ${y * depth}px)`;
+    });
+  }
+});

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aegis | Premium Hostel Management Dashboard</title>
-  <meta name="description" content="A state-of-the-art management system for university and private hostels. Connects directly to MySQL for secure, real-time administration.">
+  <meta name="description" content="A state-of-the-art management system for university and private hostels. Secure, real-time administration panel.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -18,11 +18,11 @@
     <div class="error-card">
       <div class="error-icon"><i class="fa-solid fa-database-slash"></i></div>
       <h2>Database Offline</h2>
-      <p id="db-error-msg">Could not establish a connection to the MySQL database. Please verify your settings.</p>
+      <p id="db-error-msg">Could not establish a connection to the database. Please verify your settings.</p>
       <div class="troubleshoot">
         <h4>Troubleshooting Checklist:</h4>
         <ul>
-          <li><i class="fa-solid fa-circle-check"></i> Ensure MySQL is running (e.g. XAMPP, WAMP, Docker).</li>
+          <li><i class="fa-solid fa-circle-check"></i> Ensure MySQL service is running.</li>
           <li><i class="fa-solid fa-circle-check"></i> Verify database name is <code>hostel_management_system</code>.</li>
           <li><i class="fa-solid fa-circle-check"></i> Check <code>.env</code> file credentials inside project root.</li>
         </ul>
@@ -34,16 +34,146 @@
   <!-- Toast Notification -->
   <div id="toast-container"></div>
 
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- ADMIN AUTHENTICATION SECTION (LOGIN & REGISTER) -->
+  <div id="auth-container" class="auth-page-wrapper">
+    <!-- Creative Pure CSS/JS Animated Ambient Background Orbs & Grid -->
+    <div class="auth-bg-decorations">
+      <div class="decor-orb orb-1"></div>
+      <div class="decor-orb orb-2"></div>
+      <div class="decor-orb orb-3"></div>
+      <div class="decor-grid-pattern"></div>
+    </div>
+
+    <div class="auth-outer-card">
+      <!-- Outer Brand Header -->
+      <div class="brand-header">
+        <div class="brand-badge-icon">
+          <i class="fa-solid fa-mountain-city"></i>
+        </div>
+        <h1 class="brand-title">Aegis Hostel</h1>
+        <p class="brand-subtitle">Hostel Management System</p>
+      </div>
+
+      <!-- Inner Auth Box Container -->
+      <div class="inner-auth-box">
+        
+        <!-- LOGIN FORM -->
+        <form id="login-form" class="auth-inner-form">
+          <div class="auth-box-header">
+            <h2 class="auth-box-title">Welcome back</h2>
+            <p class="auth-box-desc">Sign in to continue with the live hotel operations workspace.</p>
+          </div>
+
+          <div class="form-group">
+            <label for="login-email">Email or username</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-user input-icon"></i>
+              <input type="email" id="login-email" placeholder="Enter your email or username" required autocomplete="email">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-lock input-icon"></i>
+              <input type="password" id="login-password" placeholder="Enter your password" required autocomplete="current-password">
+              <button type="button" class="btn-toggle-password" data-target="login-password" title="Toggle password visibility">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-purple-primary" id="btn-login-submit">
+            Sign in
+          </button>
+
+          <div class="auth-divider">
+            <span>Need an admin account?</span>
+          </div>
+
+          <button type="button" class="btn-outline-secondary" id="switch-to-register">
+            Create account
+          </button>
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form id="register-form" class="auth-inner-form hidden">
+          <div class="auth-box-header">
+            <h2 class="auth-box-title">Create account</h2>
+            <p class="auth-box-desc">Register a new admin account for the workspace.</p>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-fullname">Full Name</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-id-card input-icon"></i>
+              <input type="text" id="reg-fullname" placeholder="Enter your full name" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-email">Email address</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-envelope input-icon"></i>
+              <input type="email" id="reg-email" placeholder="Enter your email address" required autocomplete="email">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-password">Password</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-lock input-icon"></i>
+              <input type="password" id="reg-password" placeholder="Create a password (min. 4 chars)" required minlength="4" autocomplete="new-password">
+              <button type="button" class="btn-toggle-password" data-target="reg-password" title="Toggle password visibility">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-confirm-password">Confirm Password</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-lock input-icon"></i>
+              <input type="password" id="reg-confirm-password" placeholder="Re-enter password" required minlength="4" autocomplete="new-password">
+              <button type="button" class="btn-toggle-password" data-target="reg-confirm-password" title="Toggle password visibility">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-purple-primary" id="btn-register-submit">
+            Create account
+          </button>
+
+          <div class="auth-divider">
+            <span>Already have an account?</span>
+          </div>
+
+          <button type="button" class="btn-outline-secondary" id="switch-to-login">
+            Sign in
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
   <!-- Main App Layout -->
-  <div class="app-container">
+  <div class="app-container hidden" id="app-main-layout">
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar-menu">
       <div class="logo-area">
         <div class="logo-icon"><i class="fa-solid fa-shield-halved"></i></div>
         <div class="logo-text">
           <h1>AEGIS</h1>
           <span>HOSTEL HUBS</span>
         </div>
+        <button id="close-sidebar-btn" class="close-sidebar-btn" aria-label="Close sidebar menu">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
       
       <nav class="nav-menu">
@@ -63,6 +193,10 @@
           <i class="fa-solid fa-moon"></i>
           <span>Dark Mode</span>
         </div>
+        <div class="sidebar-logout" id="sidebar-logout-btn" title="Logout">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Logout</span>
+        </div>
       </div>
     </aside>
 
@@ -70,22 +204,30 @@
     <main class="main-content">
       <!-- Header -->
       <header class="main-header">
-        <div class="header-search">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" id="global-search" placeholder="Search students, rooms, or receipts...">
+        <div class="header-left">
+          <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Toggle navigation menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="header-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="global-search" placeholder="Search students, rooms, or receipts...">
+          </div>
         </div>
         <div class="header-profile">
           <div class="status-indicator">
-            <span class="status-dot online"></span>
-            <span class="status-label">MySQL Connected</span>
+            <span class="status-dot online" title="System Active"></span>
           </div>
           <div class="profile-info">
             <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="Warden avatar" class="avatar">
             <div class="profile-text">
-              <h4>System Admin</h4>
-              <span>Warden Office</span>
+              <h4 id="header-user-name">System Admin</h4>
+              <span id="header-user-role">Hostel Admin</span>
             </div>
           </div>
+          <button id="logout-btn" class="btn-logout" title="Sign Out">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Logout</span>
+          </button>
         </div>
       </header>
 

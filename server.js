@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
 require('dotenv').config();
 const db = require('./db');
 
@@ -27,8 +28,160 @@ const checkDbConnection = async (req, res, next) => {
   }
 };
 
+// Password Hashing Helper
+function hashPassword(password) {
+  const salt = 'aegis_hostel_salt_2026';
+  return crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+}
+
+// Auto-initialize Admin Table and Seed Default Admin
+async function initAdminTable() {
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        admin_id INT AUTO_INCREMENT PRIMARY KEY,
+        full_name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'Hostel Admin',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    const [rows] = await db.query("SELECT * FROM admin_users WHERE email = ?", ['admin@aegis.com']);
+    if (rows.length === 0) {
+      const defaultHash = hashPassword('admin123');
+      await db.query(
+        "INSERT INTO admin_users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+        ['System Warden Admin', 'admin@aegis.com', defaultHash, 'Super Admin']
+      );
+      console.log('Default admin account created: admin@aegis.com / admin123');
+    }
+  } catch (err) {
+    console.error('Error initializing admin_users table:', err.message);
+  }
+}
+
+// Initialize Admin Table
+initAdminTable();
+
 // Apply database connection check for all APIs
 app.use('/api', checkDbConnection);
+
+// ==========================================
+// 0. AUTHENTICATION & ADMIN USER APIS
+// ==========================================
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { full_name, email, password, role } = req.body;
+
+    if (!full_name || !email || !password) {
+      return res.status(400).json({ success: false, error: 'Full name, email, and password are required' });
+    }
+
+    if (password.length < 4) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 4 characters long' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const [existing] = await db.query("SELECT admin_id FROM admin_users WHERE email = ?", [cleanEmail]);
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, error: 'An admin account with this email already exists' });
+    }
+
+    const passHash = hashPassword(password);
+    const userRole = role || 'Hostel Admin';
+
+    const [result] = await db.query(
+      "INSERT INTO admin_users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+      [full_name.trim(), cleanEmail, passHash, userRole]
+    );
+
+    const user = {
+      admin_id: result.insertId,
+      full_name: full_name.trim(),
+      email: cleanEmail,
+      role: userRole
+    };
+
+    const token = Buffer.from(JSON.stringify({ id: user.admin_id, email: user.email, time: Date.now() })).toString('base64');
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin account registered successfully!',
+      user,
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Email and password are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const passHash = hashPassword(password);
+    const [rows] = await db.query(
+      "SELECT admin_id, full_name, email, role FROM admin_users WHERE email = ? AND password_hash = ?",
+      [cleanEmail, passHash]
+    );
+
+    if (rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid email or password' });
+    }
+
+    const user = rows[0];
+    const token = Buffer.from(JSON.stringify({ id: user.admin_id, email: user.email, time: Date.now() })).toString('base64');
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      user,
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Unauthorized session' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));
+    } catch (e) {
+      return res.status(401).json({ success: false, error: 'Invalid auth token' });
+    }
+
+    const [rows] = await db.query(
+      "SELECT admin_id, full_name, email, role, created_at FROM admin_users WHERE admin_id = ?",
+      [decoded.id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Admin account not found' });
+    }
+
+    res.json({
+      success: true,
+      user: rows[0]
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // ==========================================
 // 1. DASHBOARD METRICS API
