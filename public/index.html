@@ -628,66 +628,131 @@
        MODALS SYSTEM
        ========================================== -->
   
-  <!-- Add/Edit Student Modal -->
+  <!-- ==========================================
+       MODALS SYSTEM (CREATIVE MODERN REDESIGN)
+       ========================================== -->
+  
+  <!-- 1. Add/Edit Student Modal -->
   <div id="add-student-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>Register New Student</h3>
-        <button class="close-btn" onclick="closeModal('add-student-modal')">&times;</button>
+    <div class="modal-card pm-modal-card pm-card-lg">
+      <div class="pm-modal-header pm-header-student">
+        <div class="pm-header-icon"><i class="fa-solid fa-user-plus"></i></div>
+        <div class="pm-header-text">
+          <h3 class="pm-header-title">Register New Student</h3>
+          <p>Add a new resident to the hostel directory</p>
+        </div>
+        <button type="button" class="close-btn pm-close-btn" onclick="closeModal('add-student-modal')">&times;</button>
       </div>
-      <form id="student-form" class="modal-body">
+      <form id="student-form" class="pm-form-body">
         <input type="hidden" id="student-id">
-        <div class="form-grid">
+        
+        <!-- Section 1: Basic Profile -->
+        <div class="pm-section-label"><i class="fa-solid fa-id-card"></i> Personal Profile</div>
+        <div class="pm-row">
           <div class="form-group">
-            <label for="student-admission-no">Admission No *</label>
-            <input type="text" id="student-admission-no" required placeholder="e.g. HS2026004">
+            <label for="student-admission-no">Admission No <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-hashtag"></i></div>
+              <input type="text" id="student-admission-no" required placeholder="e.g. HS2026004">
+            </div>
           </div>
           <div class="form-group">
-            <label for="student-full-name">Full Name *</label>
-            <input type="text" id="student-full-name" required placeholder="Full Name">
+            <label for="student-full-name">Full Name <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-user"></i></div>
+              <input type="text" id="student-full-name" required placeholder="Student's Full Name">
+            </div>
           </div>
+        </div>
+
+        <div class="pm-row">
           <div class="form-group">
-            <label for="student-gender">Gender *</label>
-            <select id="student-gender" required>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
+            <label for="student-gender">Gender <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-venus-mars"></i></div>
+              <select id="student-gender" required>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
           </div>
           <div class="form-group">
             <label for="student-dob">Date of Birth</label>
-            <input type="date" id="student-dob">
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-calendar"></i></div>
+              <input type="date" id="student-dob">
+            </div>
           </div>
+        </div>
+
+        <div class="pm-row">
           <div class="form-group">
-            <label for="student-phone">Phone Number *</label>
-            <input type="tel" id="student-phone" required placeholder="Phone Number">
+            <label for="student-phone">Phone Number <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-phone"></i></div>
+              <input type="tel" id="student-phone" required placeholder="Mobile Contact Number">
+            </div>
           </div>
           <div class="form-group">
             <label for="student-email">Email Address</label>
-            <input type="email" id="student-email" placeholder="Email Address">
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-envelope"></i></div>
+              <input type="email" id="student-email" placeholder="Email Address">
+            </div>
           </div>
+        </div>
+
+        <!-- Section 2: Academic Details -->
+        <div class="pm-section-label"><i class="fa-solid fa-graduation-cap"></i> Academic Information</div>
+        <div class="pm-row">
           <div class="form-group">
-            <label for="student-course">Course</label>
-            <input type="text" id="student-course" placeholder="e.g. BSc Computer Science">
+            <label for="student-course">Course / Department</label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-book"></i></div>
+              <input type="text" id="student-course" placeholder="e.g. BSc Computer Science">
+            </div>
           </div>
           <div class="form-group">
             <label for="student-year-of-study">Year of Study</label>
-            <input type="number" id="student-year-of-study" min="1" max="5" value="1">
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-layer-group"></i></div>
+              <input type="number" id="student-year-of-study" min="1" max="5" value="1">
+            </div>
           </div>
-          <div class="form-group span-2">
-            <label for="student-address">Address</label>
-            <input type="text" id="student-address" placeholder="Residential Address">
+        </div>
+
+        <!-- Section 3: Contact & Emergency -->
+        <div class="pm-section-label"><i class="fa-solid fa-house-user"></i> Residence & Guardian</div>
+        <div class="form-group pm-full">
+          <label for="student-address">Residential Address</label>
+          <div class="pm-input-group">
+            <div class="pm-input-icon-box"><i class="fa-solid fa-location-dot"></i></div>
+            <input type="text" id="student-address" placeholder="Permanent Home Address">
           </div>
+        </div>
+
+        <div class="pm-row">
           <div class="form-group">
             <label for="student-guardian-name">Guardian Name</label>
-            <input type="text" id="student-guardian-name" placeholder="Guardian Name">
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-user-shield"></i></div>
+              <input type="text" id="student-guardian-name" placeholder="Parent or Guardian Name">
+            </div>
           </div>
           <div class="form-group">
             <label for="student-guardian-phone">Guardian Phone</label>
-            <input type="tel" id="student-guardian-phone" placeholder="Guardian Phone">
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-square-phone"></i></div>
+              <input type="tel" id="student-guardian-phone" placeholder="Emergency Phone Number">
+            </div>
           </div>
-          <div class="form-group hidden" id="student-status-group">
-            <label for="student-status">Status</label>
+        </div>
+
+        <div class="form-group pm-full hidden" id="student-status-group">
+          <label for="student-status">Resident Status</label>
+          <div class="pm-input-group">
+            <div class="pm-input-icon-box"><i class="fa-solid fa-circle-info"></i></div>
             <select id="student-status">
               <option value="Active">Active</option>
               <option value="Vacated">Vacated</option>
@@ -695,330 +760,549 @@
             </select>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('add-student-modal')">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Student</button>
+
+        <div class="pm-modal-footer">
+          <button type="button" class="btn btn-secondary pm-cancel-btn" onclick="closeModal('add-student-modal')">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+          <button type="submit" class="btn btn-primary pm-submit-btn pm-btn-blue">
+            <i class="fa-solid fa-user-check"></i> Save Student Record
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Allocate Room Modal -->
+  <!-- 2. Allocate Room Modal -->
   <div id="allocate-room-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>Allocate Room / Bed</h3>
-        <button class="close-btn" onclick="closeModal('allocate-room-modal')">&times;</button>
+    <div class="modal-card pm-modal-card">
+      <div class="pm-modal-header pm-header-allocate">
+        <div class="pm-header-icon"><i class="fa-solid fa-bed"></i></div>
+        <div class="pm-header-text">
+          <h3 class="pm-header-title">Allocate Room / Bed</h3>
+          <p>Assign an available hostel bed to a resident</p>
+        </div>
+        <button type="button" class="close-btn pm-close-btn" onclick="closeModal('allocate-room-modal')">&times;</button>
       </div>
-      <form id="allocate-form" class="modal-body">
-        <div class="form-group">
-          <label for="allocate-student-id">Select Student *</label>
-          <select id="allocate-student-id" required class="input-field">
-            <option value="">-- Choose Student --</option>
-          </select>
+      <form id="allocate-form" class="pm-form-body">
+        
+        <div class="pm-section-label"><i class="fa-solid fa-user-check"></i> Resident Selection</div>
+        <div class="form-group pm-full">
+          <label for="allocate-student-id">Select Student <span class="req">*</span></label>
+          <div class="pm-input-group">
+            <div class="pm-input-icon-box"><i class="fa-solid fa-magnifying-glass"></i></div>
+            <select id="allocate-student-id" required>
+              <option value="">— Choose Student —</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="allocate-room-id">Select Room (Hostel - Room No) *</label>
-          <select id="allocate-room-id" required class="input-field">
-            <option value="">-- Choose Room --</option>
-          </select>
+
+        <div class="pm-section-label"><i class="fa-solid fa-door-open"></i> Hostel & Bed Placement</div>
+        <div class="pm-row">
+          <div class="form-group">
+            <label for="allocate-room-id">Select Room <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-building-user"></i></div>
+              <select id="allocate-room-id" required>
+                <option value="">— Choose Room —</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="allocate-bed-number">Bed Number <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-cubes"></i></div>
+              <input type="number" id="allocate-bed-number" required min="1" max="10" placeholder="e.g. 1">
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="allocate-bed-number">Bed Number *</label>
-          <input type="number" id="allocate-bed-number" required min="1" max="10" placeholder="e.g. 1">
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('allocate-room-modal')">Cancel</button>
-          <button type="submit" class="btn btn-primary">Allocate Bed</button>
+
+        <div class="pm-modal-footer">
+          <button type="button" class="btn btn-secondary pm-cancel-btn" onclick="closeModal('allocate-room-modal')">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+          <button type="submit" class="btn btn-primary pm-submit-btn pm-btn-emerald">
+            <i class="fa-solid fa-key"></i> Allocate Bed
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Record Fee Payment Modal -->
+  <!-- 3. Record Fee Payment Modal -->
   <div id="pay-fee-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>Record Fee Payment</h3>
-        <button class="close-btn" onclick="closeModal('pay-fee-modal')">&times;</button>
+    <div class="modal-card pm-modal-card">
+      <div class="pm-modal-header pm-header-fee">
+        <div class="pm-header-icon"><i class="fa-solid fa-receipt"></i></div>
+        <div class="pm-header-text">
+          <h3 class="pm-header-title">Record Fee Payment</h3>
+          <p>Issue a new payment receipt for a resident</p>
+        </div>
+        <button type="button" class="close-btn pm-close-btn" onclick="closeModal('pay-fee-modal')">&times;</button>
       </div>
-      <form id="pay-fee-form" class="modal-body">
-        <div class="form-grid">
-          <div class="form-group span-2">
-            <label for="fee-student-id">Select Student *</label>
-            <select id="fee-student-id" required class="input-field">
-              <option value="">-- Choose Student --</option>
+      <form id="pay-fee-form" class="pm-form-body">
+
+        <div class="pm-section-label"><i class="fa-solid fa-user-graduate"></i> Resident Selection</div>
+        <div class="form-group pm-full">
+          <label for="fee-student-id">Select Student <span class="req">*</span></label>
+          <div class="pm-input-group">
+            <div class="pm-input-icon-box"><i class="fa-solid fa-magnifying-glass"></i></div>
+            <select id="fee-student-id" required>
+              <option value="">— Choose Student —</option>
             </select>
           </div>
+        </div>
+
+        <div class="pm-section-label"><i class="fa-solid fa-file-invoice-dollar"></i> Payment Details</div>
+        <div class="pm-row">
           <div class="form-group">
-            <label for="fee-type">Fee Type *</label>
-            <select id="fee-type" required>
-              <option value="Room Rent">Room Rent</option>
-              <option value="Mess Fee">Mess Fee</option>
-              <option value="Security Deposit">Security Deposit</option>
-              <option value="Fine">Fine</option>
-              <option value="Other">Other</option>
-            </select>
+            <label for="fee-type">Fee Type <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-tags"></i></div>
+              <select id="fee-type" required>
+                <option value="Room Rent">🏠 Room Rent</option>
+                <option value="Mess Fee">🍽️ Mess Fee</option>
+                <option value="Security Deposit">🔒 Security Deposit</option>
+                <option value="Fine">⚠️ Fine</option>
+                <option value="Other">📋 Other</option>
+              </select>
+            </div>
           </div>
           <div class="form-group">
-            <label for="fee-amount">Amount (LKR) *</label>
-            <input type="number" step="0.01" id="fee-amount" required placeholder="0.00">
+            <label for="fee-amount">Amount (LKR) <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <span class="pm-input-prefix">LKR</span>
+              <input type="number" step="0.01" id="fee-amount" required placeholder="0.00">
+            </div>
           </div>
+        </div>
+
+        <div class="pm-row">
           <div class="form-group">
-            <label for="fee-payment-mode">Payment Mode *</label>
-            <select id="fee-payment-mode" required>
-              <option value="UPI">UPI</option>
-              <option value="Cash">Cash</option>
-              <option value="Bank Transfer">Bank Transfer</option>
-              <option value="Card">Card</option>
-              <option value="Cheque">Cheque</option>
-            </select>
+            <label for="fee-payment-mode">Payment Mode <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-credit-card"></i></div>
+              <select id="fee-payment-mode" required>
+                <option value="Cash">💵 Cash</option>
+                <option value="Bank Transfer">🏦 Bank Transfer</option>
+                <option value="Card">💳 Card</option>
+                <option value="UPI">📱 UPI</option>
+                <option value="Cheque">📄 Cheque</option>
+              </select>
+            </div>
           </div>
           <div class="form-group">
             <label for="fee-month-for">Month For</label>
-            <input type="text" id="fee-month-for" placeholder="e.g. July 2026">
-          </div>
-          <div class="form-group">
-            <label for="fee-receipt-no">Receipt No (Auto-generated if empty)</label>
-            <input type="text" id="fee-receipt-no" placeholder="e.g. RCPT-0004">
-          </div>
-          <div class="form-group">
-            <label for="fee-status">Status</label>
-            <select id="fee-status">
-              <option value="Paid">Paid</option>
-              <option value="Pending">Pending</option>
-              <option value="Overdue">Overdue</option>
-            </select>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-calendar"></i></div>
+              <input type="text" id="fee-month-for" placeholder="e.g. July 2026">
+            </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('pay-fee-modal')">Cancel</button>
-          <button type="submit" class="btn btn-primary">Record Payment</button>
+
+        <div class="pm-row">
+          <div class="form-group">
+            <label for="fee-receipt-no">Receipt No</label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-hashtag"></i></div>
+              <input type="text" id="fee-receipt-no" placeholder="Auto-generated if left blank">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="fee-status">Payment Status</label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-circle-check"></i></div>
+              <select id="fee-status">
+                <option value="Paid">✅ Paid</option>
+                <option value="Pending">⏳ Pending</option>
+                <option value="Overdue">🔴 Overdue</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="pm-modal-footer">
+          <button type="button" class="btn btn-secondary pm-cancel-btn" onclick="closeModal('pay-fee-modal')">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+          <button type="submit" class="btn btn-primary pm-submit-btn pm-btn-indigo" id="btn-record-payment">
+            <i class="fa-solid fa-floppy-disk"></i> Save Payment
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Raise Complaint Modal -->
+  <!-- 4. Raise Complaint Modal -->
   <div id="add-complaint-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>Raise Complaint</h3>
-        <button class="close-btn" onclick="closeModal('add-complaint-modal')">&times;</button>
+    <div class="modal-card pm-modal-card">
+      <div class="pm-modal-header pm-header-complaint">
+        <div class="pm-header-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="pm-header-text">
+          <h3 class="pm-header-title">Raise New Complaint</h3>
+          <p>Report maintenance, electrical, plumbing, or facility issues</p>
+        </div>
+        <button type="button" class="close-btn pm-close-btn" onclick="closeModal('add-complaint-modal')">&times;</button>
       </div>
-      <form id="complaint-form" class="modal-body">
-        <div class="form-group">
-          <label for="complaint-student-id">Select Student *</label>
-          <select id="complaint-student-id" required class="input-field">
-            <option value="">-- Choose Student --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="complaint-room-id">Select Room (Optional)</label>
-          <select id="complaint-room-id" class="input-field">
-            <option value="">-- None / Select Room --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="complaint-category">Category *</label>
-          <select id="complaint-category" required>
-            <option value="Electrical">Electrical</option>
-            <option value="Plumbing">Plumbing</option>
-            <option value="Furniture">Furniture</option>
-            <option value="Cleanliness">Cleanliness</option>
-            <option value="Internet">Internet</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="complaint-description">Description *</label>
-          <textarea id="complaint-description" rows="3" required placeholder="Brief description of the issue..."></textarea>
-        </div>
-        <div class="form-group">
-          <label for="complaint-assigned-staff-id">Assign Staff (Optional)</label>
-          <select id="complaint-assigned-staff-id" class="input-field">
-            <option value="">-- Unassigned --</option>
-          </select>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('add-complaint-modal')">Cancel</button>
-          <button type="submit" class="btn btn-primary">File Complaint</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Assign Staff Modal -->
-  <div id="assign-staff-modal" class="modal-overlay hidden">
-    <div class="modal-card modal-sm">
-      <div class="modal-header">
-        <h3>Assign Staff</h3>
-        <button class="close-btn" onclick="closeModal('assign-staff-modal')">&times;</button>
-      </div>
-      <form id="assign-staff-form" class="modal-body">
-        <input type="hidden" id="assign-complaint-id">
-        <div class="form-group">
-          <label for="assign-staff-select">Select Staff Member *</label>
-          <select id="assign-staff-select" required class="input-field">
-            <!-- Dynamic staff options -->
-          </select>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('assign-staff-modal')">Cancel</button>
-          <button type="submit" class="btn btn-primary">Assign Member</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Add Staff Modal -->
-  <div id="add-staff-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>Add Staff Member</h3>
-        <button class="close-btn" onclick="closeModal('add-staff-modal')">&times;</button>
-      </div>
-      <form id="staff-form" class="modal-body">
-        <div class="form-grid">
+      <form id="complaint-form" class="pm-form-body">
+        
+        <div class="pm-section-label"><i class="fa-solid fa-user"></i> Complainant Information</div>
+        <div class="pm-row">
           <div class="form-group">
-            <label for="staff-full-name">Full Name *</label>
-            <input type="text" id="staff-full-name" required placeholder="Full Name">
+            <label for="complaint-student-id">Select Student <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-user"></i></div>
+              <select id="complaint-student-id" required>
+                <option value="">— Choose Student —</option>
+              </select>
+            </div>
           </div>
           <div class="form-group">
-            <label for="staff-designation">Designation *</label>
-            <select id="staff-designation" required>
-              <option value="Warden">Warden</option>
-              <option value="Assistant Warden">Assistant Warden</option>
-              <option value="Security">Security</option>
-              <option value="Cleaner">Cleaner</option>
-              <option value="Cook">Cook</option>
-              <option value="Accountant">Accountant</option>
+            <label for="complaint-room-id">Select Room (Optional)</label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-door-closed"></i></div>
+              <select id="complaint-room-id">
+                <option value="">— None / Select Room —</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="pm-section-label"><i class="fa-solid fa-wrench"></i> Issue Details</div>
+        <div class="pm-row">
+          <div class="form-group">
+            <label for="complaint-category">Category <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-list-check"></i></div>
+              <select id="complaint-category" required>
+                <option value="Electrical">⚡ Electrical</option>
+                <option value="Plumbing">🚰 Plumbing</option>
+                <option value="Furniture">🪑 Furniture</option>
+                <option value="Cleanliness">🧹 Cleanliness</option>
+                <option value="Internet">🌐 Internet / Wi-Fi</option>
+                <option value="Other">🛠️ Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="complaint-assigned-staff-id">Assign Staff (Optional)</label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-user-gear"></i></div>
+              <select id="complaint-assigned-staff-id">
+                <option value="">— Unassigned —</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group pm-full">
+          <label for="complaint-description">Issue Description <span class="req">*</span></label>
+          <div class="pm-textarea-group">
+            <textarea id="complaint-description" rows="3" required placeholder="Describe the problem, location or room details..."></textarea>
+          </div>
+        </div>
+
+        <div class="pm-modal-footer">
+          <button type="button" class="btn btn-secondary pm-cancel-btn" onclick="closeModal('add-complaint-modal')">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+          <button type="submit" class="btn btn-primary pm-submit-btn pm-btn-crimson">
+            <i class="fa-solid fa-paper-plane"></i> File Complaint
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. Assign Staff Modal -->
+  <div id="assign-staff-modal" class="modal-overlay hidden">
+    <div class="modal-card pm-modal-card pm-card-sm">
+      <div class="pm-modal-header pm-header-assign">
+        <div class="pm-header-icon"><i class="fa-solid fa-user-gear"></i></div>
+        <div class="pm-header-text">
+          <h3 class="pm-header-title">Assign Staff Member</h3>
+          <p>Delegate complaint resolution to staff</p>
+        </div>
+        <button type="button" class="close-btn pm-close-btn" onclick="closeModal('assign-staff-modal')">&times;</button>
+      </div>
+      <form id="assign-staff-form" class="pm-form-body">
+        <input type="hidden" id="assign-complaint-id">
+        
+        <div class="form-group pm-full">
+          <label for="assign-staff-select">Select Staff Member <span class="req">*</span></label>
+          <div class="pm-input-group">
+            <div class="pm-input-icon-box"><i class="fa-solid fa-user-shield"></i></div>
+            <select id="assign-staff-select" required>
+              <!-- Dynamic staff options -->
             </select>
           </div>
+        </div>
+
+        <div class="pm-modal-footer">
+          <button type="button" class="btn btn-secondary pm-cancel-btn" onclick="closeModal('assign-staff-modal')">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+          <button type="submit" class="btn btn-primary pm-submit-btn pm-btn-slate">
+            <i class="fa-solid fa-check-double"></i> Assign Member
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. Add Staff Modal -->
+  <div id="add-staff-modal" class="modal-overlay hidden">
+    <div class="modal-card pm-modal-card">
+      <div class="pm-modal-header pm-header-staff">
+        <div class="pm-header-icon"><i class="fa-solid fa-user-shield"></i></div>
+        <div class="pm-header-text">
+          <h3 class="pm-header-title">Add Staff Member</h3>
+          <p>Register new warden, security, cleaning or support staff</p>
+        </div>
+        <button type="button" class="close-btn pm-close-btn" onclick="closeModal('add-staff-modal')">&times;</button>
+      </div>
+      <form id="staff-form" class="pm-form-body">
+        
+        <div class="pm-section-label"><i class="fa-solid fa-id-badge"></i> Staff Profile</div>
+        <div class="pm-row">
           <div class="form-group">
-            <label for="staff-phone">Phone Number *</label>
-            <input type="tel" id="staff-phone" required placeholder="Phone Number">
+            <label for="staff-full-name">Full Name <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-user"></i></div>
+              <input type="text" id="staff-full-name" required placeholder="Staff Member Name">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="staff-designation">Designation <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-briefcase"></i></div>
+              <select id="staff-designation" required>
+                <option value="Warden">👮 Warden</option>
+                <option value="Assistant Warden">👨‍💼 Assistant Warden</option>
+                <option value="Security">🛡️ Security Guard</option>
+                <option value="Cleaner">🧹 Maintenance / Cleaner</option>
+                <option value="Cook">👨‍🍳 Cook / Chef</option>
+                <option value="Accountant">📊 Accountant</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="pm-row">
+          <div class="form-group">
+            <label for="staff-phone">Phone Number <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-phone"></i></div>
+              <input type="tel" id="staff-phone" required placeholder="Contact Phone">
+            </div>
           </div>
           <div class="form-group">
             <label for="staff-email">Email Address</label>
-            <input type="email" id="staff-email" placeholder="Email Address">
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-envelope"></i></div>
+              <input type="email" id="staff-email" placeholder="Official Email">
+            </div>
           </div>
+        </div>
+
+        <div class="pm-section-label"><i class="fa-solid fa-building"></i> Assignment & Compensation</div>
+        <div class="pm-row">
           <div class="form-group">
             <label for="staff-hostel-id">Hostel Assigned</label>
-            <select id="staff-hostel-id">
-              <option value="">-- Unassigned --</option>
-              <option value="1">Sunrise Boys Hostel</option>
-              <option value="2">Moonlight Girls Hostel</option>
-            </select>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-hotel"></i></div>
+              <select id="staff-hostel-id">
+                <option value="">— Unassigned —</option>
+                <option value="1">Sunrise Boys Hostel</option>
+                <option value="2">Moonlight Girls Hostel</option>
+              </select>
+            </div>
           </div>
           <div class="form-group">
             <label for="staff-salary">Salary (LKR)</label>
-            <input type="number" step="0.01" id="staff-salary" placeholder="Salary Amount">
+            <div class="pm-input-group">
+              <span class="pm-input-prefix">LKR</span>
+              <input type="number" step="0.01" id="staff-salary" placeholder="Monthly Salary">
+            </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('add-staff-modal')">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Member</button>
+
+        <div class="pm-modal-footer">
+          <button type="button" class="btn btn-secondary pm-cancel-btn" onclick="closeModal('add-staff-modal')">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+          <button type="submit" class="btn btn-primary pm-submit-btn pm-btn-cyan">
+            <i class="fa-solid fa-user-plus"></i> Save Staff Member
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Apply Leave Modal -->
+  <!-- 7. Apply Leave Modal -->
   <div id="apply-leave-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>Apply for Leave</h3>
-        <button class="close-btn" onclick="closeModal('apply-leave-modal')">&times;</button>
+    <div class="modal-card pm-modal-card">
+      <div class="pm-modal-header pm-header-leave">
+        <div class="pm-header-icon"><i class="fa-solid fa-calendar-minus"></i></div>
+        <div class="pm-header-text">
+          <h3 class="pm-header-title">Apply for Student Leave</h3>
+          <p>Request permission for home visit or leave of absence</p>
+        </div>
+        <button type="button" class="close-btn pm-close-btn" onclick="closeModal('apply-leave-modal')">&times;</button>
       </div>
-      <form id="leave-form" class="modal-body">
-        <div class="form-group">
-          <label for="leave-student-id">Select Student *</label>
-          <select id="leave-student-id" required class="input-field">
-            <option value="">-- Choose Student --</option>
-          </select>
-        </div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="leave-from-date">From Date *</label>
-            <input type="date" id="leave-from-date" required>
-          </div>
-          <div class="form-group">
-            <label for="leave-to-date">To Date *</label>
-            <input type="date" id="leave-to-date" required>
+      <form id="leave-form" class="pm-form-body">
+        
+        <div class="pm-section-label"><i class="fa-solid fa-user-graduate"></i> Resident Selection</div>
+        <div class="form-group pm-full">
+          <label for="leave-student-id">Select Student <span class="req">*</span></label>
+          <div class="pm-input-group">
+            <div class="pm-input-icon-box"><i class="fa-solid fa-user"></i></div>
+            <select id="leave-student-id" required>
+              <option value="">— Choose Student —</option>
+            </select>
           </div>
         </div>
-        <div class="form-group">
-          <label for="leave-reason">Reason *</label>
-          <textarea id="leave-reason" rows="3" required placeholder="Describe reason for leave..."></textarea>
+
+        <div class="pm-section-label"><i class="fa-solid fa-clock"></i> Leave Duration & Dates</div>
+        <div class="pm-row">
+          <div class="form-group">
+            <label for="leave-from-date">From Date <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-calendar-day"></i></div>
+              <input type="date" id="leave-from-date" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="leave-to-date">To Date <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-calendar-check"></i></div>
+              <input type="date" id="leave-to-date" required>
+            </div>
+          </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('apply-leave-modal')">Cancel</button>
-          <button type="submit" class="btn btn-primary">Submit Application</button>
+
+        <div class="form-group pm-full">
+          <label for="leave-reason">Reason for Leave <span class="req">*</span></label>
+          <div class="pm-textarea-group">
+            <textarea id="leave-reason" rows="3" required placeholder="e.g. Family function, Medical emergency, Semester break..."></textarea>
+          </div>
+        </div>
+
+        <div class="pm-modal-footer">
+          <button type="button" class="btn btn-secondary pm-cancel-btn" onclick="closeModal('apply-leave-modal')">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+          <button type="submit" class="btn btn-primary pm-submit-btn pm-btn-violet">
+            <i class="fa-solid fa-paper-plane"></i> Submit Application
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Check Out Leave Modal (Approving Warden) -->
+  <!-- 8. Approve Leave Modal -->
   <div id="approve-leave-modal" class="modal-overlay hidden">
-    <div class="modal-card modal-sm">
-      <div class="modal-header">
-        <h3>Approve Leave Request</h3>
-        <button class="close-btn" onclick="closeModal('approve-leave-modal')">&times;</button>
+    <div class="modal-card pm-modal-card pm-card-sm">
+      <div class="pm-modal-header pm-header-approve">
+        <div class="pm-header-icon"><i class="fa-solid fa-user-check"></i></div>
+        <div class="pm-header-text">
+          <h3 class="pm-header-title">Approve Leave Request</h3>
+          <p>Authorize gate pass for student leave</p>
+        </div>
+        <button type="button" class="close-btn pm-close-btn" onclick="closeModal('approve-leave-modal')">&times;</button>
       </div>
-      <form id="approve-leave-form" class="modal-body">
+      <form id="approve-leave-form" class="pm-form-body">
         <input type="hidden" id="approve-leave-id">
         <input type="hidden" id="approve-leave-status">
-        <div class="form-group">
-          <label for="approve-warden-select">Approving Warden *</label>
-          <select id="approve-warden-select" required class="input-field">
-            <!-- Dynamic wardens list -->
-          </select>
+        
+        <div class="form-group pm-full">
+          <label for="approve-warden-select">Approving Warden / Authority <span class="req">*</span></label>
+          <div class="pm-input-group">
+            <div class="pm-input-icon-box"><i class="fa-solid fa-user-shield"></i></div>
+            <select id="approve-warden-select" required>
+              <!-- Dynamic wardens list -->
+            </select>
+          </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('approve-leave-modal')">Cancel</button>
-          <button type="submit" class="btn btn-primary">Confirm Decisions</button>
+
+        <div class="pm-modal-footer">
+          <button type="button" class="btn btn-secondary pm-cancel-btn" onclick="closeModal('approve-leave-modal')">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+          <button type="submit" class="btn btn-primary pm-submit-btn pm-btn-emerald">
+            <i class="fa-solid fa-check"></i> Confirm Decision
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Add Visitor Modal -->
+  <!-- 9. Check-in Visitor Modal -->
   <div id="add-visitor-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>Check-in Visitor</h3>
-        <button class="close-btn" onclick="closeModal('add-visitor-modal')">&times;</button>
-      </div>
-      <form id="visitor-form" class="modal-body">
-        <div class="form-group">
-          <label for="visitor-student-id">Visiting Student *</label>
-          <select id="visitor-student-id" required class="input-field">
-            <option value="">-- Choose Student --</option>
-          </select>
+    <div class="modal-card pm-modal-card">
+      <div class="pm-modal-header pm-header-visitor">
+        <div class="pm-header-icon"><i class="fa-solid fa-id-card"></i></div>
+        <div class="pm-header-text">
+          <h3 class="pm-header-title">Check-in Visitor</h3>
+          <p>Register guest entry for resident security</p>
         </div>
-        <div class="form-grid">
+        <button type="button" class="close-btn pm-close-btn" onclick="closeModal('add-visitor-modal')">&times;</button>
+      </div>
+      <form id="visitor-form" class="pm-form-body">
+        
+        <div class="pm-section-label"><i class="fa-solid fa-user-graduate"></i> Host Resident</div>
+        <div class="form-group pm-full">
+          <label for="visitor-student-id">Visiting Student <span class="req">*</span></label>
+          <div class="pm-input-group">
+            <div class="pm-input-icon-box"><i class="fa-solid fa-user"></i></div>
+            <select id="visitor-student-id" required>
+              <option value="">— Choose Student —</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pm-section-label"><i class="fa-solid fa-address-card"></i> Visitor Profile</div>
+        <div class="pm-row">
           <div class="form-group">
-            <label for="visitor-visitor-name">Visitor Name *</label>
-            <input type="text" id="visitor-visitor-name" required placeholder="Visitor Full Name">
+            <label for="visitor-visitor-name">Visitor Name <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-user-gear"></i></div>
+              <input type="text" id="visitor-visitor-name" required placeholder="Guest's Full Name">
+            </div>
           </div>
           <div class="form-group">
             <label for="visitor-relation">Relation to Student</label>
-            <input type="text" id="visitor-relation" placeholder="e.g. Father, Mother, Friend">
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-people-arrows"></i></div>
+              <input type="text" id="visitor-relation" placeholder="e.g. Father, Mother, Friend">
+            </div>
           </div>
+        </div>
+
+        <div class="pm-row">
           <div class="form-group">
-            <label for="visitor-phone">Visitor Phone *</label>
-            <input type="tel" id="visitor-phone" required placeholder="Visitor Phone Number">
+            <label for="visitor-phone">Visitor Phone <span class="req">*</span></label>
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-phone"></i></div>
+              <input type="tel" id="visitor-phone" required placeholder="Guest Contact Number">
+            </div>
           </div>
           <div class="form-group">
             <label for="visitor-purpose">Purpose of Visit</label>
-            <input type="text" id="visitor-purpose" placeholder="e.g. Outing pickup, Delivery, Fee deposit">
+            <div class="pm-input-group">
+              <div class="pm-input-icon-box"><i class="fa-solid fa-circle-question"></i></div>
+              <input type="text" id="visitor-purpose" placeholder="e.g. Outing pickup, Parcel delivery">
+            </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('add-visitor-modal')">Cancel</button>
-          <button type="submit" class="btn btn-primary">Check In</button>
+
+        <div class="pm-modal-footer">
+          <button type="button" class="btn btn-secondary pm-cancel-btn" onclick="closeModal('add-visitor-modal')">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+          <button type="submit" class="btn btn-primary pm-submit-btn pm-btn-amber">
+            <i class="fa-solid fa-right-to-bracket"></i> Check In Visitor
+          </button>
         </div>
       </form>
     </div>

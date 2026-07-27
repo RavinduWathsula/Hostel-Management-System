@@ -371,6 +371,7 @@ function setupEventListeners() {
     switchView('fees');
     document.querySelector('[data-fees-tab="history"]').click();
   });
+
   setupFormSubmit('complaint-form', '/complaints', 'add-complaint-modal', () => switchView('complaints'));
   setupFormSubmit('staff-form', '/staff', 'add-staff-modal', () => switchView('staff'));
   setupFormSubmit('leave-form', '/leaves', 'apply-leave-modal', () => switchView('leaves'));
@@ -461,8 +462,12 @@ function setupFormSubmit(formId, endpoint, modalId, onSuccess) {
     const elements = form.querySelectorAll('input, select, textarea');
     elements.forEach(el => {
       if (el.id) {
-        // Strip out the prefix if exists
-        const key = el.id.replace(/^(student-|allocate-|fee-|complaint-|staff-|leave-|visitor-)/, '').replace(/-/g, '_');
+        // Strip out the prefix if exists, then convert dashes to underscores
+        let key = el.id.replace(/^(student-|allocate-|fee-|complaint-|staff-|leave-|visitor-)/, '').replace(/-/g, '_');
+        // Special fix: fee form's "type" field must map to "fee_type" for the API
+        if (formId === 'pay-fee-form' && el.id === 'fee-type') {
+          key = 'fee_type';
+        }
         if (el.type === 'number') {
           formData[key] = parseFloat(el.value);
         } else {
@@ -477,6 +482,14 @@ function setupFormSubmit(formId, endpoint, modalId, onSuccess) {
     if (formId === 'student-form' && formData['id']) {
       method = 'PUT';
       url = `${API_BASE}/students/${formData['id']}`;
+    }
+
+    // Show loading state on submit button
+    const submitBtn = form.querySelector('[type="submit"]');
+    const originalText = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
     }
 
     try {
@@ -497,9 +510,15 @@ function setupFormSubmit(formId, endpoint, modalId, onSuccess) {
     } catch (err) {
       showToast('API communication failure', 'error');
       console.error(err);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
     }
   });
 }
+
 
 // ==========================================
 // VIEW ROUTER DATA LOADER
@@ -611,14 +630,15 @@ function populateStudentsDropdowns() {
     const select = document.getElementById(id);
     if (!select) return;
     
-    // Clear existing
-    select.innerHTML = '<option value="">-- Choose Student --</option>';
+    const currVal = select.value;
+    select.innerHTML = '<option value="">— Choose Student —</option>';
     state.students.forEach(st => {
       const opt = document.createElement('option');
       opt.value = st.student_id;
       opt.textContent = `${st.full_name} (${st.admission_no})`;
       select.appendChild(opt);
     });
+    if (currVal) select.value = currVal;
   });
 }
 
@@ -627,9 +647,9 @@ function populateRoomsDropdowns() {
   const complaintSelect = document.getElementById('complaint-room-id');
   
   if (select) {
-    select.innerHTML = '<option value="">-- Choose Room --</option>';
+    const currVal = select.value;
+    select.innerHTML = '<option value="">— Choose Room —</option>';
     state.rooms.forEach(r => {
-      // Show available capacity
       const avail = r.capacity - r.occupied_seats;
       const opt = document.createElement('option');
       opt.value = r.room_id;
@@ -637,16 +657,19 @@ function populateRoomsDropdowns() {
       if (avail <= 0) opt.disabled = true;
       select.appendChild(opt);
     });
+    if (currVal) select.value = currVal;
   }
 
   if (complaintSelect) {
-    complaintSelect.innerHTML = '<option value="">-- None / Select Room --</option>';
+    const currVal = complaintSelect.value;
+    complaintSelect.innerHTML = '<option value="">— None / Select Room —</option>';
     state.rooms.forEach(r => {
       const opt = document.createElement('option');
       opt.value = r.room_id;
       opt.textContent = `${r.hostel_name} - Room ${r.room_number}`;
       complaintSelect.appendChild(opt);
     });
+    if (currVal) complaintSelect.value = currVal;
   }
 }
 
@@ -656,37 +679,44 @@ function populateStaffDropdowns() {
   const wardenSelect = document.getElementById('approve-warden-select');
 
   if (assignSelect) {
-    assignSelect.innerHTML = '<option value="">-- Select Member --</option>';
+    const currVal = assignSelect.value;
+    assignSelect.innerHTML = '<option value="">— Select Staff Member —</option>';
     state.staff.forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.staff_id;
       opt.textContent = `${s.full_name} (${s.designation})`;
       assignSelect.appendChild(opt);
     });
+    if (currVal) assignSelect.value = currVal;
   }
 
   if (complaintFormStaffSelect) {
-    complaintFormStaffSelect.innerHTML = '<option value="">-- Unassigned --</option>';
+    const currVal = complaintFormStaffSelect.value;
+    complaintFormStaffSelect.innerHTML = '<option value="">— Unassigned —</option>';
     state.staff.forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.staff_id;
       opt.textContent = `${s.full_name} (${s.designation})`;
       complaintFormStaffSelect.appendChild(opt);
     });
+    if (currVal) complaintFormStaffSelect.value = currVal;
   }
 
   if (wardenSelect) {
-    wardenSelect.innerHTML = '<option value="">-- Select Warden --</option>';
-    // Filter only warden / assistant warden
+    const currVal = wardenSelect.value;
+    wardenSelect.innerHTML = '<option value="">— Select Approving Warden —</option>';
     const wardens = state.staff.filter(s => s.designation.includes('Warden'));
-    wardens.forEach(w => {
+    const listToUse = wardens.length > 0 ? wardens : state.staff;
+    listToUse.forEach(s => {
       const opt = document.createElement('option');
-      opt.value = w.staff_id;
-      opt.textContent = w.full_name;
+      opt.value = s.staff_id;
+      opt.textContent = `${s.full_name} (${s.designation})`;
       wardenSelect.appendChild(opt);
     });
+    if (currVal) wardenSelect.value = currVal;
   }
 }
+
 
 // ==========================================
 // VIEW 1: DASHBOARD PANEL
@@ -1396,18 +1426,24 @@ async function loadStaff() {
 window.openModal = function(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
+    // Ensure student, room, and staff dropdowns are loaded and populated
+    preloadDropdownData();
+
     modal.classList.remove('hidden');
     
     // Customize Header context
     if (modalId === 'add-student-modal') {
-      // Clear edit metadata if any
-      document.getElementById('student-id').value = '';
-      document.getElementById('student-status-group').classList.add('hidden');
-      document.querySelector('#add-student-modal h3').innerText = 'Register New Student';
-      document.getElementById('student-form').reset();
+      const studentIdInput = document.getElementById('student-id');
+      if (studentIdInput && !studentIdInput.value) {
+        document.getElementById('student-status-group').classList.add('hidden');
+        const titleEl = document.querySelector('#add-student-modal .pm-header-title') || document.querySelector('#add-student-modal h3');
+        if (titleEl) titleEl.innerText = 'Register New Student';
+        document.getElementById('student-form').reset();
+      }
     }
   }
 };
+
 
 window.closeModal = function(modalId) {
   const modal = document.getElementById(modalId);

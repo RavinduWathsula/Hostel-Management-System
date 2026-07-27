@@ -488,8 +488,19 @@ app.put('/api/complaints/:id/assign', async (req, res) => {
 // ==========================================
 app.get('/api/payments', async (req, res) => {
   try {
-    // Summaries from view `vw_fee_summary`
-    const [summaries] = await db.query("SELECT * FROM vw_fee_summary");
+    // Summaries: aggregate per student (no view dependency)
+    const [summaries] = await db.query(`
+      SELECT
+        s.student_id,
+        s.admission_no,
+        s.full_name,
+        COALESCE(SUM(CASE WHEN fp.status = 'Paid' THEN fp.amount ELSE 0 END), 0) AS total_paid,
+        COALESCE(SUM(CASE WHEN fp.status IN ('Pending','Overdue') THEN fp.amount ELSE 0 END), 0) AS total_due
+      FROM student s
+      LEFT JOIN fee_payment fp ON s.student_id = fp.student_id
+      GROUP BY s.student_id, s.admission_no, s.full_name
+      ORDER BY s.full_name ASC
+    `);
 
     // All payments detailed
     const [payments] = await db.query(`
