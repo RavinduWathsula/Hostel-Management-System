@@ -682,7 +682,76 @@ app.put('/api/leaves/:id/status', async (req, res) => {
 // ==========================================
 // 9. ATTENDANCE API
 // ==========================================
+
+// Per-student day-by-day chart data (last N days)
+app.get('/api/attendance/student/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { days = 30 } = req.query;
+    const numDays = Math.min(parseInt(days) || 30, 90); // cap at 90
+
+    // Generate a date series for the last N days
+    const [rows] = await db.query(`
+      SELECT 
+        d.date_val,
+        COALESCE(a.status, 'Not Marked') as status
+      FROM (
+        SELECT DATE_SUB(CURDATE(), INTERVAL n DAY) as date_val
+        FROM (
+          SELECT 0 AS n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+          UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9
+          UNION SELECT 10 UNION SELECT 11 UNION SELECT 12 UNION SELECT 13 UNION SELECT 14
+          UNION SELECT 15 UNION SELECT 16 UNION SELECT 17 UNION SELECT 18 UNION SELECT 19
+          UNION SELECT 20 UNION SELECT 21 UNION SELECT 22 UNION SELECT 23 UNION SELECT 24
+          UNION SELECT 25 UNION SELECT 26 UNION SELECT 27 UNION SELECT 28 UNION SELECT 29
+          UNION SELECT 30 UNION SELECT 31 UNION SELECT 32 UNION SELECT 33 UNION SELECT 34
+          UNION SELECT 35 UNION SELECT 36 UNION SELECT 37 UNION SELECT 38 UNION SELECT 39
+          UNION SELECT 40 UNION SELECT 41 UNION SELECT 42 UNION SELECT 43 UNION SELECT 44
+          UNION SELECT 45 UNION SELECT 46 UNION SELECT 47 UNION SELECT 48 UNION SELECT 49
+          UNION SELECT 50 UNION SELECT 51 UNION SELECT 52 UNION SELECT 53 UNION SELECT 54
+          UNION SELECT 55 UNION SELECT 56 UNION SELECT 57 UNION SELECT 58 UNION SELECT 59
+          UNION SELECT 60 UNION SELECT 61 UNION SELECT 62 UNION SELECT 63 UNION SELECT 64
+          UNION SELECT 65 UNION SELECT 66 UNION SELECT 67 UNION SELECT 68 UNION SELECT 69
+          UNION SELECT 70 UNION SELECT 71 UNION SELECT 72 UNION SELECT 73 UNION SELECT 74
+          UNION SELECT 75 UNION SELECT 76 UNION SELECT 77 UNION SELECT 78 UNION SELECT 79
+          UNION SELECT 80 UNION SELECT 81 UNION SELECT 82 UNION SELECT 83 UNION SELECT 84
+          UNION SELECT 85 UNION SELECT 86 UNION SELECT 87 UNION SELECT 88 UNION SELECT 89
+        ) nums
+        WHERE n < ?
+      ) d
+      LEFT JOIN attendance a ON a.student_id = ? AND a.attendance_date = d.date_val
+      ORDER BY d.date_val ASC
+    `, [numDays, id]);
+
+    // Also get the student info
+    const [studentRows] = await db.query(
+      'SELECT student_id, full_name, admission_no FROM student WHERE student_id = ?', [id]
+    );
+
+    const totalMarked = rows.filter(r => r.status !== 'Not Marked').length;
+    const totalPresent = rows.filter(r => r.status === 'Present').length;
+    const totalAbsent = rows.filter(r => r.status === 'Absent').length;
+    const totalLeave = rows.filter(r => r.status === 'On Leave').length;
+    const attendanceRate = totalMarked > 0 ? Math.round((totalPresent / totalMarked) * 100) : 0;
+
+    res.json({
+      success: true,
+      student: studentRows[0] || null,
+      summary: { totalMarked, totalPresent, totalAbsent, totalLeave, attendanceRate, days: numDays },
+      data: rows.map(r => ({
+        date: r.date_val instanceof Date 
+          ? r.date_val.toISOString().split('T')[0] 
+          : r.date_val,
+        status: r.status
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.get('/api/attendance', async (req, res) => {
+
   try {
     const { date } = req.query;
     const targetDate = date || new Date().toISOString().split('T')[0];

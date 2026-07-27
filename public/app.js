@@ -449,6 +449,9 @@ function setupEventListeners() {
   
   // Save attendance
   document.getElementById('save-attendance-btn').addEventListener('click', saveAttendanceSheet);
+
+  // Attendance graph pickers
+  setupAttendanceGraphListeners();
 }
 
 // Helper: Setup Standard Form Posts
@@ -1173,8 +1176,12 @@ function openAssignStaff(id) {
 }
 
 // ==========================================
-// VIEW 6: ATTENDANCE TRACKER
 // ==========================================
+// VIEW 6: ATTENDANCE TRACKER (WITH GRAPH)
+// ==========================================
+
+let attChartInstance = null; // global Chart.js instance
+
 async function loadAttendanceSheet(date) {
   try {
     const res = await fetch(`${API_BASE}/attendance?date=${date}`);
@@ -1184,12 +1191,17 @@ async function loadAttendanceSheet(date) {
     const tbody = document.getElementById('attendance-table-body');
     tbody.innerHTML = '';
 
+    let presentCount = 0, absentCount = 0, leaveCount = 0;
+
     data.data.forEach(att => {
       const tr = document.createElement('tr');
-      
       const pChecked = att.status === 'Present' ? 'checked' : '';
       const aChecked = att.status === 'Absent' ? 'checked' : '';
       const lChecked = att.status === 'On Leave' ? 'checked' : '';
+
+      if (att.status === 'Present') presentCount++;
+      else if (att.status === 'Absent') absentCount++;
+      else if (att.status === 'On Leave') leaveCount++;
 
       tr.innerHTML = `
         <td><code>${att.admission_no}</code></td>
@@ -1197,23 +1209,58 @@ async function loadAttendanceSheet(date) {
         <td>
           <div class="attendance-switch-group">
             <input type="radio" name="att-${att.student_id}" id="p-${att.student_id}" value="Present" class="attendance-btn-radio" ${pChecked}>
-            <label for="p-${att.student_id}" class="attendance-radio-label present">Present</label>
+            <label for="p-${att.student_id}" class="attendance-radio-label present">✓ Present</label>
 
             <input type="radio" name="att-${att.student_id}" id="a-${att.student_id}" value="Absent" class="attendance-btn-radio" ${aChecked}>
-            <label for="a-${att.student_id}" class="attendance-radio-label absent">Absent</label>
+            <label for="a-${att.student_id}" class="attendance-radio-label absent">✗ Absent</label>
 
             <input type="radio" name="att-${att.student_id}" id="l-${att.student_id}" value="On Leave" class="attendance-btn-radio" ${lChecked}>
-            <label for="l-${att.student_id}" class="attendance-radio-label leave">On Leave</label>
+            <label for="l-${att.student_id}" class="attendance-radio-label leave">⏸ Leave</label>
           </div>
         </td>
-        <td>${att.marked_by_name || 'System Auto'}</td>
       `;
+
+      // Live update badge counters when radio changes
+      tr.querySelectorAll('.attendance-btn-radio').forEach(radio => {
+        radio.addEventListener('change', updateAttendanceBadges);
+      });
+
       tbody.appendChild(tr);
     });
 
+    // Populate the student chart picker dropdown too
+    const picker = document.getElementById('att-student-picker');
+    if (picker && picker.options.length <= 1) {
+      picker.innerHTML = '<option value="">— Select a Student —</option>';
+      data.data.forEach(att => {
+        const opt = document.createElement('option');
+        opt.value = att.student_id;
+        opt.textContent = `${att.full_name} (${att.admission_no})`;
+        picker.appendChild(opt);
+      });
+    }
+
+    updateAttendanceBadges();
   } catch (err) {
-    showToast('Failed to load attendance rollheet', 'error');
+    showToast('Failed to load attendance roll sheet', 'error');
   }
+}
+
+function updateAttendanceBadges() {
+  const tbody = document.getElementById('attendance-table-body');
+  const rows = tbody.querySelectorAll('tr');
+  let present = 0, absent = 0, leave = 0;
+  rows.forEach(tr => {
+    const checked = tr.querySelector('input[type="radio"]:checked');
+    if (!checked) return;
+    if (checked.value === 'Present') present++;
+    else if (checked.value === 'Absent') absent++;
+    else if (checked.value === 'On Leave') leave++;
+  });
+  const el = id => document.getElementById(id);
+  if (el('att-present-count')) el('att-present-count').textContent = present;
+  if (el('att-absent-count')) el('att-absent-count').textContent = absent;
+  if (el('att-leave-count')) el('att-leave-count').textContent = leave;
 }
 
 async function saveAttendanceSheet() {
@@ -1226,10 +1273,7 @@ async function saveAttendanceSheet() {
     const radioChecked = tr.querySelector('input[type="radio"]:checked');
     if (radioChecked) {
       const studentId = radioChecked.name.replace('att-', '');
-      records.push({
-        student_id: parseInt(studentId),
-        status: radioChecked.value
-      });
+      records.push({ student_id: parseInt(studentId), status: radioChecked.value });
     }
   });
 
@@ -1242,16 +1286,17 @@ async function saveAttendanceSheet() {
     const response = await fetch(`${API_BASE}/attendance`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        attendance_date: date,
-        records: records,
-        marked_by: 1 // Default Warden Ramesh ID for demo
-      })
+      body: JSON.stringify({ attendance_date: date, records: records })
     });
     const res = await response.json();
     if (res.success) {
-      showToast(res.message);
+      showToast('✅ Attendance saved successfully!');
       loadAttendanceSheet(date);
+      // Refresh chart if a student is selected
+      const picker = document.getElementById('att-student-picker');
+      if (picker && picker.value) {
+        loadStudentAttendanceGraph(picker.value);
+      }
     } else {
       showToast(res.error, 'error');
     }
@@ -1259,6 +1304,168 @@ async function saveAttendanceSheet() {
     showToast('API communication error saving rolls', 'error');
   }
 }
+
+// Load and render per-student day-by-day bar chart
+async function loadStudentAttendanceGraph(studentId) {
+  if (!studentId) return;
+  const days = document.getElementById('att-days-picker')?.value || 30;
+
+  try {
+    const res = await fetch(`${API_BASE}/attendance/student/${studentId}?days=${days}`);
+    const data = await res.json();
+    if (!data.success) { showToast('Failed to load attendance graph', 'error'); return; }
+
+    // Show summary cards
+    const el = id => document.getElementById(id);
+    el('att-graph-empty').classList.add('hidden');
+    el('att-graph-stats').classList.remove('hidden');
+    el('att-chart-container').classList.remove('hidden');
+
+    const s = data.summary;
+    el('att-stat-present').textContent = s.totalPresent;
+    el('att-stat-absent').textContent = s.totalAbsent;
+    el('att-stat-leave').textContent = s.totalLeave;
+    el('att-stat-rate').textContent = `${s.attendanceRate}%`;
+
+    // Update student name banner
+    if (data.student) {
+      el('att-chart-student-name').textContent = data.student.full_name;
+      el('att-chart-admission-no').textContent = data.student.admission_no;
+    }
+
+    // Prepare Chart.js data
+    const labels = data.data.map(d => {
+      const dt = new Date(d.date);
+      return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    });
+
+    const statusToValue = s => s === 'Present' ? 1 : s === 'Absent' ? -1 : s === 'On Leave' ? 0.5 : 0;
+    const barColors = data.data.map(d => {
+      if (d.status === 'Present') return 'rgba(34, 197, 94, 0.85)';
+      if (d.status === 'Absent') return 'rgba(239, 68, 68, 0.85)';
+      if (d.status === 'On Leave') return 'rgba(251, 191, 36, 0.85)';
+      return 'rgba(100, 116, 139, 0.4)';
+    });
+    const borderColors = data.data.map(d => {
+      if (d.status === 'Present') return 'rgba(34, 197, 94, 1)';
+      if (d.status === 'Absent') return 'rgba(239, 68, 68, 1)';
+      if (d.status === 'On Leave') return 'rgba(251, 191, 36, 1)';
+      return 'rgba(100, 116, 139, 0.6)';
+    });
+
+    const chartValues = data.data.map(d => {
+      if (d.status === 'Present') return 3;
+      if (d.status === 'Absent') return 1;
+      if (d.status === 'On Leave') return 2;
+      return 0;
+    });
+
+    const tooltipLabels = data.data.map(d => d.status);
+
+    // Destroy existing chart
+    if (attChartInstance) {
+      attChartInstance.destroy();
+      attChartInstance = null;
+    }
+
+    const canvas = el('att-bar-chart');
+    const ctx = canvas.getContext('2d');
+
+    attChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Attendance',
+          data: chartValues,
+          backgroundColor: barColors,
+          borderColor: borderColors,
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 600, easing: 'easeOutQuart' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const rawStatus = tooltipLabels[context.dataIndex];
+                return ` ${rawStatus}`;
+              },
+              title: (items) => {
+                const idx = items[0].dataIndex;
+                return data.data[idx].date;
+              }
+            },
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            borderColor: 'rgba(59, 130, 246, 0.4)',
+            borderWidth: 1,
+            titleColor: '#94a3b8',
+            bodyColor: '#f1f5f9',
+            padding: 12,
+            cornerRadius: 8,
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(148, 163, 184, 0.08)' },
+            ticks: {
+              color: '#64748b',
+              font: { size: 10, family: 'Outfit' },
+              maxRotation: 45,
+            }
+          },
+          y: {
+            grid: { color: 'rgba(148, 163, 184, 0.08)' },
+            ticks: {
+              color: '#64748b',
+              stepSize: 1,
+              font: { size: 11, family: 'Outfit' },
+              callback: (v) => {
+                if (v === 3) return '✓ Present';
+                if (v === 2) return '⏸ Leave';
+                if (v === 1) return '✗ Absent';
+                if (v === 0) return 'No Data';
+                return '';
+              }
+            },
+            min: 0,
+            max: 3.5,
+          }
+        }
+      }
+    });
+
+  } catch (err) {
+    showToast('Error loading attendance graph', 'error');
+  }
+}
+
+// Wire up attendance graph pickers (called once)
+function setupAttendanceGraphListeners() {
+  const studentPicker = document.getElementById('att-student-picker');
+  const daysPicker = document.getElementById('att-days-picker');
+
+  if (studentPicker) {
+    studentPicker.addEventListener('change', () => {
+      if (studentPicker.value) loadStudentAttendanceGraph(studentPicker.value);
+    });
+  }
+
+  if (daysPicker) {
+    daysPicker.addEventListener('change', () => {
+      const studentPicker = document.getElementById('att-student-picker');
+      if (studentPicker && studentPicker.value) loadStudentAttendanceGraph(studentPicker.value);
+    });
+  }
+}
+
+
 
 // ==========================================
 // VIEW 7: LEAVE APPLICATIONS

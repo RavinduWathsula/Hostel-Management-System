@@ -10,6 +10,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js for attendance graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark-theme">
@@ -497,33 +500,133 @@
 
         <!-- ATTENDANCE VIEW -->
         <section id="attendance-view" class="content-view hidden">
+          
+          <!-- View Header -->
           <div class="view-header">
             <div>
-              <h2>Daily Attendance Tracker</h2>
-              <p>Mark daily rolls and keep registers updated for students</p>
+              <h2>Attendance Tracker</h2>
+              <p>Mark daily rolls and view day-by-day attendance graphs per student</p>
             </div>
-            <div class="attendance-controls">
-              <input type="date" id="attendance-datepicker" class="input-field">
-              <button class="btn btn-success" id="save-attendance-btn"><i class="fa-solid fa-save"></i> Save Attendance</button>
+            <div class="attendance-header-actions">
+              <div class="att-date-picker-group">
+                <i class="fa-solid fa-calendar-day att-date-icon"></i>
+                <input type="date" id="attendance-datepicker" class="att-datepicker">
+              </div>
+              <button class="btn btn-primary att-save-btn" id="save-attendance-btn">
+                <i class="fa-solid fa-floppy-disk"></i> Save Roll
+              </button>
             </div>
           </div>
 
-          <div class="table-container">
-            <table class="data-table" id="attendance-table">
-              <thead>
-                <tr>
-                  <th>Admission No</th>
-                  <th>Student Name</th>
-                  <th>Roll Status</th>
-                  <th>Last Marked By</th>
-                </tr>
-              </thead>
-              <tbody id="attendance-table-body">
-                <!-- Dynamically generated -->
-              </tbody>
-            </table>
-          </div>
+          <!-- Two-panel layout -->
+          <div class="attendance-layout">
+
+            <!-- LEFT: Daily Rollcall Panel -->
+            <div class="att-rollcall-panel">
+              <div class="att-panel-header">
+                <div class="att-panel-title">
+                  <i class="fa-solid fa-clipboard-list"></i>
+                  <span>Daily Roll Call</span>
+                </div>
+                <div class="att-stats-badges" id="att-daily-stats">
+                  <span class="att-badge present"><i class="fa-solid fa-circle-check"></i> <span id="att-present-count">0</span> Present</span>
+                  <span class="att-badge absent"><i class="fa-solid fa-circle-xmark"></i> <span id="att-absent-count">0</span> Absent</span>
+                  <span class="att-badge leave"><i class="fa-solid fa-calendar-minus"></i> <span id="att-leave-count">0</span> On Leave</span>
+                </div>
+              </div>
+              <div class="att-rollcall-scroll">
+                <table class="att-rollcall-table" id="attendance-table">
+                  <thead>
+                    <tr>
+                      <th>Admission No</th>
+                      <th>Student Name</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="attendance-table-body">
+                    <tr><td colspan="3" class="att-empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Loading students...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- RIGHT: Per-Student Chart Panel -->
+            <div class="att-graph-panel">
+              <div class="att-panel-header">
+                <div class="att-panel-title">
+                  <i class="fa-solid fa-chart-column"></i>
+                  <span>Attendance Graph</span>
+                </div>
+                <div class="att-graph-controls">
+                  <div class="att-student-picker-wrap">
+                    <i class="fa-solid fa-user att-picker-icon"></i>
+                    <select id="att-student-picker" class="att-student-picker">
+                      <option value="">— Select a Student —</option>
+                    </select>
+                  </div>
+                  <select id="att-days-picker" class="att-days-picker">
+                    <option value="14">Last 14 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="60">Last 60 days</option>
+                    <option value="90">Last 90 days</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Empty State (shown before student selected) -->
+              <div id="att-graph-empty" class="att-graph-empty-state">
+                <div class="att-graph-empty-icon"><i class="fa-solid fa-chart-bar"></i></div>
+                <h4>Select a Student</h4>
+                <p>Choose a student from the dropdown to view their day-by-day attendance history.</p>
+              </div>
+
+              <!-- Stats Cards (shown after student selected) -->
+              <div id="att-graph-stats" class="att-graph-stats hidden">
+                <div class="att-stat-card present-card">
+                  <div class="att-stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+                  <div class="att-stat-data">
+                    <span id="att-stat-present">0</span>
+                    <label>Present</label>
+                  </div>
+                </div>
+                <div class="att-stat-card absent-card">
+                  <div class="att-stat-icon"><i class="fa-solid fa-circle-xmark"></i></div>
+                  <div class="att-stat-data">
+                    <span id="att-stat-absent">0</span>
+                    <label>Absent</label>
+                  </div>
+                </div>
+                <div class="att-stat-card leave-card">
+                  <div class="att-stat-icon"><i class="fa-solid fa-calendar-minus"></i></div>
+                  <div class="att-stat-data">
+                    <span id="att-stat-leave">0</span>
+                    <label>On Leave</label>
+                  </div>
+                </div>
+                <div class="att-stat-card rate-card">
+                  <div class="att-stat-icon"><i class="fa-solid fa-percent"></i></div>
+                  <div class="att-stat-data">
+                    <span id="att-stat-rate">0%</span>
+                    <label>Rate</label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Chart Canvas -->
+              <div id="att-chart-container" class="att-chart-container hidden">
+                <div class="att-student-name-banner" id="att-student-name-banner">
+                  <i class="fa-solid fa-user-graduate"></i>
+                  <span id="att-chart-student-name">Student Name</span>
+                  <span class="att-admission-badge" id="att-chart-admission-no"></span>
+                </div>
+                <canvas id="att-bar-chart"></canvas>
+              </div>
+
+            </div><!-- end right panel -->
+          </div><!-- end layout -->
+
         </section>
+
 
         <!-- LEAVES VIEW -->
         <section id="leaves-view" class="content-view hidden">
