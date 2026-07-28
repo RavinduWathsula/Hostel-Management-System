@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 require('dotenv').config();
 const db = require('./db');
@@ -11,6 +12,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'dist')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Database Connection Middleware helper
@@ -229,8 +231,25 @@ app.get('/api/dashboard/stats', async (req, res) => {
         totalPaidFees: parseFloat(feesResult[0].total_paid || 0),
         totalDueFees: parseFloat(feesResult[0].total_due || 0),
         hostels: hostelsResult
+      },
+      kpis: {
+        total_students: studentsResult[0].count,
+        active_allocations: parseInt(occupancyResult[0].occupied_seats || 0),
+        monthly_revenue: parseFloat(feesResult[0].total_paid || 0),
+        pending_complaints: complaintsResult[0].count
       }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/dashboard/kpis', (req, res) => res.redirect('/api/dashboard/stats'));
+
+app.get('/api/hostels', async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM hostel ORDER BY hostel_id");
+    res.json({ success: true, data: rows, hostels: rows });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -335,6 +354,38 @@ app.get('/api/rooms', async (req, res) => {
   }
 });
 
+app.post('/api/rooms', async (req, res) => {
+  try {
+    const { room_number, hostel_id, capacity, floor_number, room_type, monthly_rent } = req.body;
+    if (!room_number || !hostel_id) {
+      return res.status(400).json({ success: false, error: 'Room number and hostel are required' });
+    }
+    const [result] = await db.query(
+      "INSERT INTO room (room_number, hostel_id, capacity, occupied_seats, floor_number, room_type, monthly_rent) VALUES (?, ?, ?, 0, ?, ?, ?)",
+      [room_number.trim(), hostel_id, capacity || 2, floor_number || 1, room_type || 'Standard', monthly_rent || 10000]
+    );
+    res.status(201).json({ success: true, message: 'Room added successfully', room_id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/hostels', async (req, res) => {
+  try {
+    const { hostel_name, hostel_type, address, total_floors } = req.body;
+    if (!hostel_name) {
+      return res.status(400).json({ success: false, error: 'Hostel name is required' });
+    }
+    const [result] = await db.query(
+      "INSERT INTO hostel (hostel_name, hostel_type, address, total_floors) VALUES (?, ?, ?, ?)",
+      [hostel_name.trim(), hostel_type || 'Co-ed', address || null, total_floors || 3]
+    );
+    res.status(201).json({ success: true, message: 'Hostel added successfully', hostel_id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.get('/api/allocations/occupancy', async (req, res) => {
   try {
     // Select from view vw_room_occupancy
@@ -361,28 +412,43 @@ app.get('/api/allocations/active', async (req, res) => {
   }
 });
 
-// Allocate room using stored procedure `sp_allocate_room`
 app.post('/api/allocations', async (req, res) => {
   try {
     const { student_id, room_id, bed_number } = req.body;
-    if (!student_id || !room_id || !bed_number) {
-      return res.status(400).json({ success: false, error: 'Student, Room, and Bed number are required' });
+    if (!student_id || !room_id) {
+      return res.status(400).json({ success: false, error: 'Student and Room are required' });
     }
 
-    // Call stored procedure sp_allocate_room
-    const [result] = await db.query(
-      "CALL sp_allocate_room(?, ?, ?)",
-      [student_id, room_id, bed_number]
+    const bedNum = bed_number || 1;
+
+    // Check if student already has an active allocation
+    const [existing] = await db.query(
+      "SELECT allocation_id FROM room_allocation WHERE student_id = ? AND status = 'Active'",
+      [student_id]
     );
-    
-    // In mysql2 CALL returns an array of result sets, the first element contains the output variables/select result
-    const msg = result[0][0].message;
-    
-    if (msg.includes('successfully')) {
-      res.json({ success: true, message: msg });
+
+    if (existing.length > 0) {
+      await db.query(
+        "UPDATE room_allocation SET room_id = ?, bed_number = ?, status = 'Active' WHERE allocation_id = ?",
+        [room_id, bedNum, existing[0].allocation_id]
+      );
     } else {
-      res.status(400).json({ success: false, error: msg });
+      await db.query(
+        "INSERT INTO room_allocation (student_id, room_id, bed_number, status) VALUES (?, ?, ?, 'Active')",
+        [student_id, room_id, bedNum]
+      );
     }
+
+    // Recalculate room occupied seats
+    await db.query(`
+      UPDATE room r
+      SET occupied_seats = (
+        SELECT COUNT(*) FROM room_allocation ra WHERE ra.room_id = r.room_id AND ra.status = 'Active'
+      )
+      WHERE r.room_id = ?
+    `, [room_id]);
+
+    res.json({ success: true, message: 'Room allocated successfully' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -486,7 +552,7 @@ app.put('/api/complaints/:id/assign', async (req, res) => {
 // ==========================================
 // 5. FEE PAYMENTS API
 // ==========================================
-app.get('/api/payments', async (req, res) => {
+const handleGetPayments = async (req, res) => {
   try {
     // Summaries: aggregate per student (no view dependency)
     const [summaries] = await db.query(`
@@ -504,7 +570,7 @@ app.get('/api/payments', async (req, res) => {
 
     // All payments detailed
     const [payments] = await db.query(`
-      SELECT fp.*, s.full_name, s.admission_no
+      SELECT fp.*, s.full_name AS student_name, s.full_name, s.admission_no
       FROM fee_payment fp
       JOIN student s ON fp.student_id = s.student_id
       ORDER BY fp.payment_id DESC
@@ -518,26 +584,32 @@ app.get('/api/payments', async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
-});
+};
 
-app.post('/api/payments', async (req, res) => {
+const handlePostPayment = async (req, res) => {
   try {
     const { student_id, fee_type, amount, payment_mode, month_for, receipt_no, status } = req.body;
-    if (!student_id || !fee_type || !amount || !payment_mode) {
-      return res.status(400).json({ success: false, error: 'Required fields missing' });
+    const finalFeeType = fee_type || 'Hostel Fee';
+    if (!student_id || !amount || !payment_mode) {
+      return res.status(400).json({ success: false, error: 'Required fields missing: student_id, amount, and payment_mode are required' });
     }
 
     await db.query(
       `INSERT INTO fee_payment (student_id, fee_type, amount, payment_mode, month_for, receipt_no, status)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [student_id, fee_type, amount, payment_mode, month_for || null, receipt_no || `RCPT-${Date.now()}`, status || 'Paid']
+      [student_id, finalFeeType, amount, payment_mode, month_for || null, receipt_no || `RCPT-${Date.now()}`, status || 'Paid']
     );
 
     res.status(201).json({ success: true, message: 'Fee payment recorded successfully' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
-});
+};
+
+app.get('/api/payments', handleGetPayments);
+app.get('/api/fees/payments', handleGetPayments);
+app.post('/api/payments', handlePostPayment);
+app.post('/api/fees/payments', handlePostPayment);
 
 // ==========================================
 // 6. VISITOR LOG API
@@ -798,9 +870,14 @@ app.post('/api/attendance', async (req, res) => {
   }
 });
 
-// Serve frontend for any other routes
+// Serve frontend for any other routes (dist build or fallback)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  const distPath = path.join(__dirname, 'dist', 'index.html');
+  if (fs.existsSync(distPath)) {
+    res.sendFile(distPath);
+  } else {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
 });
 
 // Start Server
