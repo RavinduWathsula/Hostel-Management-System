@@ -8,9 +8,10 @@ export function AuthView() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [registerForm, setRegisterForm] = useState({
     full_name: '',
+    username: '',
     email: '',
     password: '',
     confirm_password: '',
@@ -22,7 +23,7 @@ export function AuthView() {
     setError('');
     setLoading(true);
     try {
-      await login(loginForm.email, loginForm.password);
+      await login(loginForm.username, loginForm.password);
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
@@ -82,16 +83,16 @@ export function AuthView() {
           <form onSubmit={handleLoginSubmit} className="space-y-5">
             <div>
               <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
-                Admin Email / Username
+                Username or Email
               </label>
               <div className="relative flex items-center">
-                <Mail className="w-4 h-4 absolute left-3.5 text-slate-400" />
+                <User className="w-4 h-4 absolute left-3.5 text-slate-400" />
                 <input
-                  type="email"
+                  type="text"
                   required
-                  placeholder="admin@aegis.com"
-                  value={loginForm.email}
-                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                  placeholder="admin or admin@aegis.com"
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition-colors"
                 />
               </div>
@@ -149,6 +150,23 @@ export function AuthView() {
                   placeholder="System Administrator"
                   value={registerForm.full_name}
                   onChange={(e) => setRegisterForm({ ...registerForm, full_name: e.target.value })}
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                Username
+              </label>
+              <div className="relative flex items-center">
+                <User className="w-4 h-4 absolute left-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  required
+                  placeholder="admin"
+                  value={registerForm.username}
+                  onChange={(e) => setRegisterForm({ ...registerForm, username: e.target.value })}
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
                 />
               </div>

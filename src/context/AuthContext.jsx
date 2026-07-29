@@ -47,13 +47,13 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (usernameOrEmail, password) => {
     let res;
     try {
       res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username: usernameOrEmail, email: usernameOrEmail, password }),
       });
     } catch (netErr) {
       throw new Error('Network error: Could not reach backend server. Please verify Express server is running on port 5000.');
