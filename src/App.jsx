@@ -359,6 +359,8 @@ export function AppContent() {
             <RoomsView
               hostels={hostels}
               rooms={rooms}
+              students={students}
+              allocations={allocations}
               onAddRoom={handleAddRoom}
               onAddHostel={handleAddHostel}
             />

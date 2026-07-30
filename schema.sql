@@ -4,21 +4,10 @@
 CREATE DATABASE IF NOT EXISTS hostel_management_system;
 USE hostel_management_system;
 
--- Reset existing tables safely
+-- Safe initialization (Tables created if not existing, seed data inserted if not existing)
 SET FOREIGN_KEY_CHECKS = 0;
 DROP VIEW IF EXISTS vw_open_complaints;
 DROP VIEW IF EXISTS vw_room_occupancy;
-DROP TABLE IF EXISTS attendance;
-DROP TABLE IF EXISTS leave_application;
-DROP TABLE IF EXISTS visitor_log;
-DROP TABLE IF EXISTS fee_payment;
-DROP TABLE IF EXISTS complaint;
-DROP TABLE IF EXISTS staff;
-DROP TABLE IF EXISTS room_allocation;
-DROP TABLE IF EXISTS student;
-DROP TABLE IF EXISTS room;
-DROP TABLE IF EXISTS hostel;
-DROP TABLE IF EXISTS admin_users;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- 1. Admin Users Table
@@ -47,9 +36,7 @@ CREATE TABLE IF NOT EXISTS hostel (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO hostel (hostel_id, hostel_name, hostel_type, address, total_floors) VALUES
-(1, 'Aegis North Block', 'Boys', '12 University Avenue, Block A', 4),
-(2, 'Aegis South Block', 'Girls', '14 University Avenue, Block B', 3),
-(3, 'Aegis Executive Residence', 'Co-ed', '18 University Avenue, Block C', 5);
+(1, 'Aegis Girls Hostel', 'Girls', '14 University Avenue, Girls Block', 4);
 
 -- 3. Room Table
 CREATE TABLE IF NOT EXISTS room (
@@ -69,9 +56,9 @@ INSERT IGNORE INTO room (room_id, hostel_id, room_number, capacity, occupied_sea
 (1, 1, '101', 2, 2, 1, 'Single Deluxe', 7500.00),
 (2, 1, '102', 3, 2, 1, 'Double Sharing', 5500.00),
 (3, 1, '201', 2, 1, 2, 'Single Deluxe', 7500.00),
-(4, 2, 'G-101', 2, 2, 1, 'Single Deluxe', 8000.00),
-(5, 2, 'G-102', 3, 1, 1, 'Double Sharing', 6000.00),
-(6, 3, 'E-301', 1, 1, 3, 'Suite', 12000.00);
+(4, 1, 'G-101', 2, 2, 1, 'Single Deluxe', 8000.00),
+(5, 1, 'G-102', 3, 1, 1, 'Double Sharing', 6000.00),
+(6, 1, 'E-301', 1, 1, 3, 'Suite', 12000.00);
 
 -- 4. Student Table
 CREATE TABLE IF NOT EXISTS student (
@@ -87,16 +74,13 @@ CREATE TABLE IF NOT EXISTS student (
   address TEXT,
   guardian_name VARCHAR(100),
   guardian_phone VARCHAR(20),
-  status ENUM('Active', 'Inactive', 'Graduated') DEFAULT 'Active',
+  status VARCHAR(50) DEFAULT 'Active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO student (student_id, admission_no, full_name, gender, dob, phone, email, course, year_of_study, address, guardian_name, guardian_phone, status) VALUES
-(1, 'STU202601', 'Ravindu Perera', 'Male', '2002-05-14', '+94771234567', 'ravindu@student.edu', 'Computer Science', 3, '45 Main St, Colombo', 'Sunil Perera', '+94719876543', 'Active'),
 (2, 'STU202602', 'Ananya Sharma', 'Female', '2003-08-22', '+94772345678', 'ananya@student.edu', 'Information Technology', 2, '78 Park Rd, Kandy', 'Rajesh Sharma', '+94718765432', 'Active'),
-(3, 'STU202603', 'Kasun Fernando', 'Male', '2001-11-03', '+94773456789', 'kasun@student.edu', 'Software Engineering', 4, '12 Beach Rd, Galle', 'Nimal Fernando', '+94717654321', 'Active'),
-(4, 'STU202604', 'Dilini Silva', 'Female', '2003-02-17', '+94774567890', 'dilini@student.edu', 'Data Science', 2, '89 Hill St, Nuwara Eliya', 'Kamal Silva', '+94716543210', 'Active'),
-(5, 'STU202605', 'Kavinda Jayasinghe', 'Male', '2002-09-30', '+94775678901', 'kavinda@student.edu', 'Cyber Security', 3, '34 Lake Rd, Kurunegala', 'Sarath Jayasinghe', '+94715432109', 'Active');
+(4, 'STU202604', 'Dilini Silva', 'Female', '2003-02-17', '+94774567890', 'dilini@student.edu', 'Data Science', 2, '89 Hill St, Nuwara Eliya', 'Kamal Silva', '+94716543210', 'Active');
 
 -- 5. Room Allocation Table
 CREATE TABLE IF NOT EXISTS room_allocation (
@@ -111,11 +95,8 @@ CREATE TABLE IF NOT EXISTS room_allocation (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO room_allocation (allocation_id, student_id, room_id, bed_number, allocated_date, status) VALUES
-(1, 1, 1, 1, '2026-01-10', 'Active'),
 (2, 2, 4, 1, '2026-01-12', 'Active'),
-(3, 3, 1, 2, '2026-01-15', 'Active'),
-(4, 4, 4, 2, '2026-01-18', 'Active'),
-(5, 5, 2, 1, '2026-02-01', 'Active');
+(4, 4, 4, 2, '2026-01-18', 'Active');
 
 -- 6. Staff Table
 CREATE TABLE IF NOT EXISTS staff (
@@ -241,8 +222,8 @@ SELECT
   r.room_number, 
   h.hostel_name, 
   r.capacity, 
-  r.occupied_seats, 
-  (r.capacity - r.occupied_seats) AS available_seats,
+  (SELECT COUNT(*) FROM room_allocation ra WHERE ra.room_id = r.room_id AND ra.status = 'Active') AS occupied_seats, 
+  (r.capacity - (SELECT COUNT(*) FROM room_allocation ra WHERE ra.room_id = r.room_id AND ra.status = 'Active')) AS available_seats,
   r.monthly_rent,
   r.room_type,
   r.floor_number

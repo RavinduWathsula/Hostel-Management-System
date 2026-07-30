@@ -12,7 +12,7 @@ export function StudentsView({ students = [], hostels = [], onAddStudent, onEdit
   const [formData, setFormData] = useState({
     admission_no: '',
     full_name: '',
-    gender: 'Male',
+    gender: 'Female',
     dob: '',
     phone: '',
     email: '',
@@ -29,7 +29,7 @@ export function StudentsView({ students = [], hostels = [], onAddStudent, onEdit
     setFormData({
       admission_no: `HS${new Date().getFullYear()}${Math.floor(100 + Math.random() * 900)}`,
       full_name: '',
-      gender: 'Male',
+      gender: 'Female',
       dob: '',
       phone: '',
       email: '',
@@ -48,8 +48,8 @@ export function StudentsView({ students = [], hostels = [], onAddStudent, onEdit
     setFormData({
       admission_no: student.admission_no || '',
       full_name: student.full_name || '',
-      gender: student.gender || 'Male',
-      dob: student.dob ? student.dob.substring(0, 10) : '',
+      gender: student.gender || 'Female',
+      dob: student.dob ? String(student.dob).substring(0, 10) : '',
       phone: student.phone || '',
       email: student.email || '',
       course: student.course || '',
@@ -65,7 +65,8 @@ export function StudentsView({ students = [], hostels = [], onAddStudent, onEdit
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editingStudent) {
-      await onEditStudent(editingStudent.id, formData);
+      const stId = editingStudent.student_id || editingStudent.id;
+      await onEditStudent(stId, formData);
     } else {
       await onAddStudent(formData);
     }
@@ -183,21 +184,26 @@ export function StudentsView({ students = [], hostels = [], onAddStudent, onEdit
                         {st.course || 'General'} (Yr {st.year_of_study || 1})
                       </td>
                       <td className="px-6 py-4">
-                        <select
-                          value={st.status || 'Active'}
-                          onChange={(e) => onEditStudent(studentId, { ...st, status: e.target.value })}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-xl border focus:outline-none cursor-pointer transition-all ${
-                            st.status === 'Active'
-                              ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                              : st.status === 'Suspended'
-                              ? 'bg-rose-500/15 text-rose-500 border-rose-500/30'
-                              : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
-                          }`}
-                        >
-                          <option value="Active" className="bg-slate-900 text-emerald-400">Active</option>
-                          <option value="Suspended" className="bg-slate-900 text-rose-400">Suspended</option>
-                          <option value="Vacated" className="bg-slate-900 text-amber-400">Vacated</option>
-                        </select>
+                        {(() => {
+                          const currentStatus = (st.status && ['Active', 'Suspended', 'Vacated'].includes(st.status)) ? st.status : 'Active';
+                          return (
+                            <select
+                              value={currentStatus}
+                              onChange={(e) => onEditStudent(studentId, { ...st, status: e.target.value })}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-xl border focus:outline-none cursor-pointer transition-all ${
+                                currentStatus === 'Active'
+                                  ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
+                                  : currentStatus === 'Suspended'
+                                  ? 'bg-rose-500/15 text-rose-500 border-rose-500/30'
+                                  : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                              }`}
+                            >
+                              <option value="Active" className="bg-slate-900 text-emerald-400">Active</option>
+                              <option value="Suspended" className="bg-slate-900 text-rose-400">Suspended</option>
+                              <option value="Vacated" className="bg-slate-900 text-amber-400">Vacated</option>
+                            </select>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -283,8 +289,8 @@ export function StudentsView({ students = [], hostels = [], onAddStudent, onEdit
                 onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                 className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-blue-500"
               >
-                <option value="Male">Male</option>
                 <option value="Female">Female</option>
+                <option value="Male">Male</option>
                 <option value="Other">Other</option>
               </select>
             </div>
