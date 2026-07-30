@@ -356,6 +356,20 @@ app.put('/api/students/:id', async (req, res) => {
       [admission_no, full_name, gender, dob || null, phone, email || null, course || null, year_of_study || null, address || null, guardian_name || null, guardian_phone || null, status, id]
     );
 
+    if (status === 'Vacated') {
+      const [allocs] = await db.query("SELECT room_id FROM room_allocation WHERE student_id = ? AND status = 'Active'", [id]);
+      await db.query("UPDATE room_allocation SET status = 'Vacated' WHERE student_id = ? AND status = 'Active'", [id]);
+      for (const a of allocs) {
+        await db.query(`
+          UPDATE room r
+          SET occupied_seats = (
+            SELECT COUNT(*) FROM room_allocation ra WHERE ra.room_id = r.room_id AND ra.status = 'Active'
+          )
+          WHERE r.room_id = ?
+        `, [a.room_id]);
+      }
+    }
+
     res.json({ success: true, message: 'Student updated successfully' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -407,6 +421,41 @@ app.post('/api/rooms', async (req, res) => {
   }
 });
 
+const deleteRoomHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.query("DELETE FROM room_allocation WHERE room_id = ?", [id]);
+    await db.query("UPDATE complaint SET room_id = NULL WHERE room_id = ?", [id]);
+    await db.query("DELETE FROM room WHERE room_id = ?", [id]);
+    res.json({ success: true, message: 'Room deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+app.delete('/api/rooms/:id', deleteRoomHandler);
+app.delete('/rooms/:id', deleteRoomHandler);
+
+const editRoomHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { room_number, hostel_id, capacity, floor_number, room_type, monthly_rent } = req.body;
+    if (!room_number || !hostel_id) {
+      return res.status(400).json({ success: false, error: 'Room number and hostel are required' });
+    }
+
+    await db.query(
+      `UPDATE room SET room_number = ?, hostel_id = ?, capacity = ?, floor_number = ?, room_type = ?, monthly_rent = ? WHERE room_id = ?`,
+      [room_number.trim(), hostel_id, capacity || 2, floor_number || 1, room_type || 'Standard', monthly_rent || 8000, id]
+    );
+
+    res.json({ success: true, message: 'Room updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+app.put('/api/rooms/:id', editRoomHandler);
+app.put('/rooms/:id', editRoomHandler);
+
 app.post('/api/hostels', async (req, res) => {
   try {
     const { hostel_name, hostel_type, address, total_floors } = req.body;
@@ -436,12 +485,16 @@ app.get('/api/allocations/occupancy', async (req, res) => {
 app.get('/api/allocations/active', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT ra.*, ra.allocation_id as id, s.full_name as student_name, s.admission_no, r.room_number, h.hostel_name
+      SELECT ra.allocation_id, ra.allocation_id as id, ra.student_id, ra.room_id, ra.bed_number, 
+             DATE_FORMAT(ra.allocated_date, '%Y-%m-%d') as allocated_date, 
+             DATE_FORMAT(ra.allocated_date, '%Y-%m-%d') as allocated_from, 
+             ra.status, s.full_name as student_name, s.admission_no, s.status as student_status, r.room_number, h.hostel_name
       FROM room_allocation ra
       JOIN student s ON ra.student_id = s.student_id
       JOIN room r ON ra.room_id = r.room_id
       JOIN hostel h ON r.hostel_id = h.hostel_id
       WHERE ra.status = 'Active'
+      ORDER BY ra.allocation_id DESC
     `);
     res.json({ success: true, data: rows, allocations: rows });
   } catch (error) {
@@ -451,12 +504,13 @@ app.get('/api/allocations/active', async (req, res) => {
 
 app.post('/api/allocations', async (req, res) => {
   try {
-    const { student_id, room_id, bed_number } = req.body;
+    const { student_id, room_id, bed_number, allocated_from, allocated_date } = req.body;
     if (!student_id || !room_id) {
       return res.status(400).json({ success: false, error: 'Student and Room are required' });
     }
 
     const bedNum = bed_number || 1;
+    const dateVal = allocated_from || allocated_date || new Date().toISOString().substring(0, 10);
 
     // Check if student already has an active allocation
     const [existing] = await db.query(
@@ -466,13 +520,13 @@ app.post('/api/allocations', async (req, res) => {
 
     if (existing.length > 0) {
       await db.query(
-        "UPDATE room_allocation SET room_id = ?, bed_number = ?, status = 'Active' WHERE allocation_id = ?",
-        [room_id, bedNum, existing[0].allocation_id]
+        "UPDATE room_allocation SET room_id = ?, bed_number = ?, allocated_date = ?, status = 'Active' WHERE allocation_id = ?",
+        [room_id, bedNum, dateVal, existing[0].allocation_id]
       );
     } else {
       await db.query(
-        "INSERT INTO room_allocation (student_id, room_id, bed_number, status) VALUES (?, ?, ?, 'Active')",
-        [student_id, room_id, bedNum]
+        "INSERT INTO room_allocation (student_id, room_id, bed_number, allocated_date, status) VALUES (?, ?, ?, ?, 'Active')",
+        [student_id, room_id, bedNum, dateVal]
       );
     }
 
@@ -511,6 +565,43 @@ postVacate = async (req, res) => {
   }
 };
 app.post('/api/allocations/vacate', postVacate);
+app.post('/allocations/vacate', postVacate);
+
+const changeBedHandler = async (req, res) => {
+  try {
+    const { allocation_id, new_room_id, new_bed_number } = req.body;
+    if (!allocation_id || !new_room_id) {
+      return res.status(400).json({ success: false, error: 'Allocation ID and target room are required' });
+    }
+
+    const [alloc] = await db.query("SELECT * FROM room_allocation WHERE allocation_id = ?", [allocation_id]);
+    if (alloc.length === 0) {
+      return res.status(404).json({ success: false, error: 'Allocation record not found' });
+    }
+
+    const old_room_id = alloc[0].room_id;
+    const targetBed = new_bed_number || 1;
+
+    await db.query(
+      "UPDATE room_allocation SET room_id = ?, bed_number = ? WHERE allocation_id = ?",
+      [new_room_id, targetBed, allocation_id]
+    );
+
+    await db.query(`
+      UPDATE room r
+      SET occupied_seats = (
+        SELECT COUNT(*) FROM room_allocation ra WHERE ra.room_id = r.room_id AND ra.status = 'Active'
+      )
+      WHERE r.room_id IN (?, ?)
+    `, [old_room_id, new_room_id]);
+
+    res.json({ success: true, message: 'Bed spot updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+app.post('/api/allocations/change-bed', changeBedHandler);
+app.post('/allocations/change-bed', changeBedHandler);
 
 // ==========================================
 // 4. COMPLAINTS API

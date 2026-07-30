@@ -48,12 +48,12 @@ export function Sidebar({ currentView, setCurrentView, counts = {}, mobileOpen, 
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-72 bg-dark-sidebar light:bg-white border-r border-dark-border light:border-slate-200 flex flex-col transition-transform duration-300 md:static md:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-72 h-screen max-h-screen bg-dark-sidebar light:bg-white border-r border-dark-border light:border-slate-200 flex flex-col transition-transform duration-300 md:sticky md:top-0 md:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
-        <div className="px-6 py-6 border-b border-dark-border light:border-slate-200 flex items-center justify-between">
+        <div className="px-6 py-6 border-b border-dark-border light:border-slate-200 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
               <ShieldAlert className="w-6 h-6" />
@@ -76,7 +76,7 @@ export function Sidebar({ currentView, setCurrentView, counts = {}, mobileOpen, 
         </div>
 
         {/* Navigation Menu */}
-        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 min-h-0 p-4 space-y-1.5 overflow-y-auto">
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
@@ -110,11 +110,11 @@ export function Sidebar({ currentView, setCurrentView, counts = {}, mobileOpen, 
         </nav>
 
         {/* Footer Settings & Logout */}
-        <div className="p-4 border-t border-dark-border light:border-slate-200 space-y-2">
+        <div className="p-4 border-t border-dark-border light:border-slate-200 space-y-2 mt-auto shrink-0 bg-dark-sidebar light:bg-white">
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-dashed border-dark-border light:border-slate-300 text-slate-400 light:text-slate-600 hover:bg-dark-hover light:hover:bg-slate-100 transition-colors text-sm font-semibold"
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-dashed border-dark-border light:border-slate-300 text-slate-400 light:text-slate-600 hover:bg-dark-hover light:hover:bg-slate-100 transition-colors text-sm font-semibold cursor-pointer"
           >
             <div className="flex items-center gap-3">
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-purple-600" />}
@@ -128,7 +128,7 @@ export function Sidebar({ currentView, setCurrentView, counts = {}, mobileOpen, 
           {/* Logout Button */}
           <button
             onClick={logout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-colors text-sm font-semibold"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-colors text-sm font-semibold cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign Out</span>

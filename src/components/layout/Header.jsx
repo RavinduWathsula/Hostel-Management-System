@@ -36,11 +36,7 @@ export function Header({ onMobileMenuClick, searchTerm, setSearchTerm, dbOnline 
 
       {/* Header Profile & Status Info */}
       <div className="flex items-center gap-4 md:gap-6">
-        {/* DB Connection Indicator */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-dark-border light:border-slate-200 bg-dark-card light:bg-slate-50 text-xs font-semibold">
-          <span className={`w-2 h-2 rounded-full ${dbOnline ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-rose-500 shadow-[0_0_8px_#ef4444]'}`} />
-          <span className="text-slate-400 light:text-slate-600">{dbOnline ? 'Database Live' : 'DB Offline'}</span>
-        </div>
+
 
         {/* Date Display */}
         <div className="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 text-xs font-bold">

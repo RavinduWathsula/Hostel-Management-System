@@ -16,10 +16,9 @@ export function AllocationsView({ allocations = [], students = [], hostels = [],
   const getRoomNumber = (r) => r.room_number || r.number || getRoomId(r);
 
   const initialHostelId = hostels.length > 0 ? getHostelId(hostels[0]) : '';
-  const initialStudentId = students.length > 0 ? getStudentId(students[0]) : '';
 
   const [formData, setFormData] = useState({
-    student_id: initialStudentId,
+    student_id: '',
     hostel_id: initialHostelId,
     room_id: '',
     bed_number: 1,
@@ -29,12 +28,11 @@ export function AllocationsView({ allocations = [], students = [], hostels = [],
   const handleOpenModal = () => {
     setErrorMsg('');
     const firstHId = hostels.length > 0 ? getHostelId(hostels[0]) : '';
-    const firstStId = students.length > 0 ? getStudentId(students[0]) : '';
     const hRooms = rooms.filter(r => String(r.hostel_id) === String(firstHId));
     const firstRId = hRooms.length > 0 ? getRoomId(hRooms[0]) : (rooms.length > 0 ? getRoomId(rooms[0]) : '');
 
     setFormData({
-      student_id: firstStId,
+      student_id: '',
       hostel_id: firstHId,
       room_id: firstRId,
       bed_number: 1,
@@ -97,7 +95,7 @@ export function AllocationsView({ allocations = [], students = [], hostels = [],
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-sm shadow-lg shadow-emerald-500/25 transition-all"
         >
           <Plus className="w-4 h-4" />
-          <span>+ Allocate New Room</span>
+          <span>Allocate New Room</span>
         </button>
       </div>
 
@@ -117,33 +115,50 @@ export function AllocationsView({ allocations = [], students = [], hostels = [],
               {allocations.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-12 text-center text-slate-400 light:text-slate-500">
-                    No active room allocations recorded. Click "+ Allocate New Room" to assign a resident.
+                    No active room allocations recorded. Click "Allocate New Room" to assign a resident.
                   </td>
                 </tr>
               ) : (
-                allocations.map(acc => (
-                  <tr key={acc.allocation_id || acc.id} className="hover:bg-dark-hover light:hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-semibold text-slate-100 light:text-slate-900">
-                      {acc.student_name} ({acc.admission_no})
-                    </td>
-                    <td className="px-6 py-4 text-slate-300 light:text-slate-700">
-                      {acc.hostel_name}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 rounded-lg bg-blue-500/10 text-blue-400 font-bold font-mono text-xs border border-blue-500/20">
-                        Room {acc.room_number} • Bed {acc.bed_number}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-xs text-slate-400 light:text-slate-500">
-                      {acc.allocated_from ? acc.allocated_from.substring(0, 10) : 'Active'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/20">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Active
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                allocations.map(acc => {
+                  const rawDate = acc.allocated_date || acc.allocated_from || acc.created_at;
+                  const formattedDate = rawDate ? String(rawDate).substring(0, 10) : new Date().toISOString().substring(0, 10);
+                  const studentObj = students.find(s => String(s.student_id || s.id) === String(acc.student_id));
+                  const currentStatus = acc.student_status || (studentObj ? studentObj.status : null) || acc.status || 'Active';
+
+                  return (
+                    <tr key={acc.allocation_id || acc.id} className="hover:bg-dark-hover light:hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-slate-100 light:text-slate-900">
+                        {acc.student_name} ({acc.admission_no})
+                      </td>
+                      <td className="px-6 py-4 text-slate-300 light:text-slate-700">
+                        {acc.hostel_name}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-3 py-1 rounded-lg bg-blue-500/10 text-blue-400 font-bold font-mono text-xs border border-blue-500/20">
+                          Room {acc.room_number} • Bed {acc.bed_number}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-mono font-semibold text-slate-300 light:text-slate-700">
+                        {formattedDate}
+                      </td>
+                      <td className="px-6 py-4">
+                        {currentStatus === 'Suspended' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                            <AlertCircle className="w-3.5 h-3.5" /> Suspended
+                          </span>
+                        ) : currentStatus === 'Vacated' || currentStatus === 'Inactive' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/20">
+                            <AlertCircle className="w-3.5 h-3.5" /> {currentStatus}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/20">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Active
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -176,12 +191,14 @@ export function AllocationsView({ allocations = [], students = [], hostels = [],
               onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
               className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-emerald-500"
             >
-              {students.length === 0 && <option value="">No students available</option>}
+              <option value="">-- Choose Student --</option>
+              {students.length === 0 && <option value="" disabled>No students available</option>}
               {students.map(st => {
                 const sId = getStudentId(st);
+                const isSuspended = st.status === 'Suspended';
                 return (
-                  <option key={sId} value={sId}>
-                    {getStudentName(st)} ({st.admission_no || sId})
+                  <option key={sId} value={sId} disabled={isSuspended}>
+                    {getStudentName(st)} ({st.admission_no || sId}) {isSuspended ? '⚠️ [SUSPENDED]' : ''}
                   </option>
                 );
               })}

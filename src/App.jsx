@@ -147,6 +147,69 @@ export function AppContent() {
     return data;
   };
 
+  const handleDeleteRoom = async (roomId) => {
+    if (!window.confirm('Are you sure you want to delete this room?')) return;
+    try {
+      const res = await fetch(`/api/rooms/${roomId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setRooms(prev => prev.filter(r => String(r.room_id || r.id) !== String(roomId)));
+        fetchAllData();
+      } else {
+        alert(data.error || 'Failed to delete room');
+      }
+      return data;
+    } catch (err) {
+      alert('Error deleting room: ' + err.message);
+    }
+  };
+
+  const handleEditRoom = async (roomId, roomData) => {
+    const res = await fetch(`/api/rooms/${roomId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(roomData)
+    });
+    const data = await res.json();
+    if (data.success) {
+      fetchAllData();
+    } else {
+      alert(data.error || 'Failed to update room');
+    }
+    return data;
+  };
+
+  const handleVacateRoom = async (allocationId) => {
+    if (!window.confirm('Are you sure you want to vacate this resident from the room bed?')) return;
+    const res = await fetch('/api/allocations/vacate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ allocation_id: allocationId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      fetchAllData();
+    } else {
+      alert(data.error || 'Failed to vacate room bed');
+    }
+    return data;
+  };
+
+  const handleChangeBed = async (allocationId, newRoomId, newBedNumber) => {
+    const res = await fetch('/api/allocations/change-bed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ allocation_id: allocationId, new_room_id: newRoomId, new_bed_number: newBedNumber })
+    });
+    const data = await res.json();
+    if (data.success) {
+      fetchAllData();
+    } else {
+      alert(data.error || 'Failed to change bed');
+    }
+    return data;
+  };
+
   // Fee Payment Handler
   const handleRecordFee = async (feeData) => {
     try {
@@ -346,11 +409,18 @@ export function AppContent() {
             <DashboardView
               stats={stats}
               hostels={hostels}
+              rooms={rooms}
+              students={students}
+              allocations={allocations}
+              complaints={complaints}
+              payments={feePayments}
               onQuickAction={(action) => {
                 if (action === 'add-student') setCurrentView('students');
                 if (action === 'allocate-room') setCurrentView('allocations');
                 if (action === 'record-fee') setCurrentView('fees');
                 if (action === 'log-complaint') setCurrentView('complaints');
+                if (action === 'attendance') setCurrentView('attendance');
+                if (action === 'visitors') setCurrentView('visitors');
               }}
             />
           )}
@@ -362,7 +432,13 @@ export function AppContent() {
               students={students}
               allocations={allocations}
               onAddRoom={handleAddRoom}
+              onEditRoom={handleEditRoom}
               onAddHostel={handleAddHostel}
+              onDeleteRoom={handleDeleteRoom}
+              onVacateRoom={handleVacateRoom}
+              onChangeBed={handleChangeBed}
+              onAllocateRoom={handleAllocateRoom}
+              onNavigateToAllocation={() => setCurrentView('allocations')}
             />
           )}
 

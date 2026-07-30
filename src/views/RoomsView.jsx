@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Building2, Plus, BedDouble, Users, Home, DollarSign, Eye, CheckCircle2, Phone, Sparkles, User, Info, Heart } from 'lucide-react';
+import { Building2, Plus, BedDouble, Users, Home, DollarSign, Eye, CheckCircle2, Phone, Sparkles, User, Info, Heart, Trash2, ArrowLeftRight, LogOut, Pencil } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
-export function RoomsView({ hostels = [], rooms = [], students = [], allocations = [], onAddRoom, onAddHostel }) {
+export function RoomsView({ hostels = [], rooms = [], students = [], allocations = [], onAddRoom, onEditRoom, onAddHostel, onDeleteRoom, onVacateRoom, onChangeBed, onAllocateRoom, onNavigateToAllocation }) {
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [isHostelModalOpen, setIsHostelModalOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
+  const [changeBedModal, setChangeBedModal] = useState(null);
+  const [editRoomModal, setEditRoomModal] = useState(null);
+  const [quickAllocateModal, setQuickAllocateModal] = useState(null);
 
   const getHostelId = (h) => h.hostel_id || h.id;
   const getHostelName = (h) => h.hostel_name || h.name || `Hostel ${getHostelId(h)}`;
@@ -169,19 +172,32 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                 className="bg-dark-card light:bg-white border border-dark-border light:border-slate-200 rounded-2xl p-6 shadow-sm hover:-translate-y-1 hover:border-purple-500/60 hover:shadow-xl hover:shadow-purple-500/10 cursor-pointer transition-all duration-300 flex flex-col justify-between group relative overflow-hidden"
               >
                 <div>
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center justify-between gap-2 mb-4">
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 light:text-slate-500">
                       Floor {room.floor_number || 1} • {room.room_type || 'Standard'}
                     </span>
-                    <span
-                      className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${
-                        isFull
-                          ? 'bg-rose-500/15 text-rose-500 dark:text-rose-400 border border-rose-500/20'
-                          : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                      }`}
-                    >
-                      {isFull ? 'Fully Occupied' : `${freeBeds} Beds Free`}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`px-3 py-1 text-xs font-extrabold rounded-full whitespace-nowrap shadow-sm ${
+                          isFull
+                            ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                            : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                        }`}
+                      >
+                        {isFull ? 'Fully Occupied' : freeBeds === 1 ? '1 Bed Free' : `${freeBeds} Beds Free`}
+                      </span>
+                      <button
+                        type="button"
+                        title="Delete Room"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onDeleteRoom) onDeleteRoom(roomId);
+                        }}
+                        className="p-1.5 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 hover:text-rose-300 border border-rose-500/30 transition-all shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   <h3 className="text-2xl font-extrabold font-heading text-slate-100 light:text-slate-900 mb-2 group-hover:text-purple-400 transition-colors flex items-center justify-between">
@@ -219,9 +235,9 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                     </span>
                   </div>
 
-                  <div className="mt-3 pt-2 text-[11px] font-bold text-purple-400 group-hover:text-purple-300 flex items-center justify-center gap-1 bg-purple-500/10 rounded-lg py-1 border border-purple-500/20">
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Click to View Room Details & Residents</span>
+                  <div className="mt-3 px-3 py-2 text-xs font-bold text-purple-400 group-hover:text-purple-300 flex items-center justify-center gap-2 bg-purple-500/10 group-hover:bg-purple-500/20 rounded-xl border border-purple-500/20 text-center leading-snug transition-all">
+                    <Eye className="w-4 h-4 shrink-0 text-purple-400" />
+                    <span>View Room Details & Residents</span>
                   </div>
                 </div>
               </div>
@@ -272,7 +288,7 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                 {Array.from({ length: getRoomCapacity(selectedRoom) }).map((_, idx) => {
                   const bedNum = idx + 1;
                   const roomAllocated = allocations.filter(a => String(a.room_id) === String(getRoomId(selectedRoom)) && a.status === 'Active');
-                  const allocation = roomAllocated.find(a => Number(a.bed_number) === bedNum) || roomAllocated[idx];
+                  const allocation = roomAllocated.find(a => Number(a.bed_number) === bedNum);
                   const student = allocation ? students.find(s => String(s.student_id || s.id) === String(allocation.student_id)) : null;
 
                   return (
@@ -294,9 +310,15 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                             <div>
                               <div className="font-bold text-sm text-slate-100 light:text-slate-900 flex items-center gap-2">
                                 <span>{allocation?.student_name || student?.full_name || 'Resident Assigned'}</span>
-                                <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-pink-500/15 text-pink-400 border border-pink-500/20">
-                                  {student?.gender || 'Female'}
-                                </span>
+                                {student?.status === 'Suspended' ? (
+                                  <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                                    Suspended
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-pink-500/15 text-pink-400 border border-pink-500/20">
+                                    {student?.gender || 'Female'}
+                                  </span>
+                                )}
                               </div>
                               <div className="text-xs text-slate-400 light:text-slate-500 mt-0.5 flex flex-wrap items-center gap-3">
                                 <span>ID: <strong className="text-slate-300 light:text-slate-700">{allocation?.admission_no || student?.admission_no || 'STU'}</strong></span>
@@ -315,15 +337,67 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                         </div>
                       </div>
 
-                      <div className="text-right">
+                      <div className="flex items-center justify-end gap-2 flex-wrap sm:flex-nowrap">
                         {allocation ? (
-                          <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                            Occupied
-                          </span>
+                          <>
+                            <button
+                              type="button"
+                              title="Change Bed / Transfer Resident"
+                              onClick={() => {
+                                const currentRId = getRoomId(selectedRoom);
+                                const currentRoomNum = selectedRoom.room_number;
+                                const firstTargetRoom = rooms.find(r => String(getRoomId(r)) !== String(currentRId)) || rooms[0];
+                                const targetRId = firstTargetRoom ? getRoomId(firstTargetRoom) : '';
+                                setSelectedRoom(null);
+                                setChangeBedModal({
+                                  allocation_id: allocation.allocation_id || allocation.id,
+                                  student_name: allocation?.student_name || student?.full_name || 'Resident',
+                                  current_room: currentRoomNum,
+                                  current_bed: bedNum,
+                                  new_room_id: targetRId,
+                                  new_bed_number: 1
+                                });
+                              }}
+                              className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border border-purple-500/30 flex items-center gap-1.5 transition-all"
+                            >
+                              <ArrowLeftRight className="w-3.5 h-3.5" />
+                              <span>Change Bed</span>
+                            </button>
+                            <button
+                              type="button"
+                              title="Vacate Resident from Bed"
+                              onClick={() => {
+                                const allocId = allocation.allocation_id || allocation.id;
+                                setSelectedRoom(null);
+                                if (onVacateRoom) onVacateRoom(allocId);
+                              }}
+                              className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 border border-rose-500/30 flex items-center gap-1.5 transition-all"
+                            >
+                              <LogOut className="w-3.5 h-3.5" />
+                              <span>Vacate Bed</span>
+                            </button>
+                          </>
                         ) : (
-                          <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            Available
-                          </span>
+                          <button
+                            type="button"
+                            title="Allocate Resident to Bed"
+                            onClick={() => {
+                              const currentRId = getRoomId(selectedRoom);
+                              const currentRoomNum = selectedRoom.room_number;
+                              setSelectedRoom(null);
+                              setQuickAllocateModal({
+                                student_id: '',
+                                room_id: currentRId,
+                                room_number: currentRoomNum,
+                                bed_number: bedNum,
+                                allocated_from: new Date().toISOString().substring(0, 10)
+                              });
+                            }}
+                            className="px-3 py-1.5 text-xs font-bold rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30 flex items-center gap-1.5 transition-all"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Allocate Bed</span>
+                          </button>
                         )}
                       </div>
                     </div>
@@ -349,7 +423,41 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-end pt-3 border-t border-dark-border light:border-slate-200">
+            <div className="flex items-center justify-between pt-3 border-t border-dark-border light:border-slate-200">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const roomToEdit = { ...selectedRoom };
+                    setSelectedRoom(null);
+                    setEditRoomModal({
+                      room_id: getRoomId(roomToEdit),
+                      room_number: roomToEdit.room_number,
+                      hostel_id: roomToEdit.hostel_id,
+                      capacity: getRoomCapacity(roomToEdit),
+                      floor_number: roomToEdit.floor_number || 1,
+                      room_type: roomToEdit.room_type || 'Standard',
+                      monthly_rent: getRoomRent(roomToEdit)
+                    });
+                  }}
+                  className="px-4 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-400 font-bold text-xs border border-purple-500/30 flex items-center gap-1.5 transition-all"
+                >
+                  <Pencil className="w-4 h-4" />
+                  <span>Edit Room</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const rId = getRoomId(selectedRoom);
+                    setSelectedRoom(null);
+                    if (onDeleteRoom) onDeleteRoom(rId);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 font-bold text-xs border border-rose-500/30 flex items-center gap-1.5 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Room</span>
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => setSelectedRoom(null)}
@@ -482,6 +590,305 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
           </div>
         </form>
       </Modal>
+
+      {/* CHANGE BED MODAL */}
+      {changeBedModal && (
+        <Modal
+          isOpen={Boolean(changeBedModal)}
+          onClose={() => setChangeBedModal(null)}
+          title={`Change Bed Spot - ${changeBedModal.student_name}`}
+          subtitle={`Currently in Room ${changeBedModal.current_room} • Bed ${changeBedModal.current_bed}`}
+          icon={ArrowLeftRight}
+          themeClass="from-purple-600 to-indigo-600"
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!changeBedModal.new_room_id) return;
+              if (onChangeBed) {
+                await onChangeBed(
+                  changeBedModal.allocation_id,
+                  Number(changeBedModal.new_room_id),
+                  Number(changeBedModal.new_bed_number || 1)
+                );
+              }
+              setChangeBedModal(null);
+            }}
+            className="space-y-4 font-body"
+          >
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                Select Target Room <span className="text-rose-500">*</span>
+              </label>
+              <select
+                required
+                value={changeBedModal.new_room_id}
+                onChange={(e) => setChangeBedModal({ ...changeBedModal, new_room_id: e.target.value })}
+                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-purple-500"
+              >
+                {rooms.map(r => {
+                  const rId = getRoomId(r);
+                  const free = getRoomCapacity(r) - getRoomOccupied(r);
+                  return (
+                    <option key={rId} value={rId}>
+                      Room {r.room_number} ({r.hostel_name || 'Hostel'}) - {free > 0 ? `${free} beds free` : 'Full'}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                Select Bed Spot Number
+              </label>
+              <select
+                value={changeBedModal.new_bed_number}
+                onChange={(e) => setChangeBedModal({ ...changeBedModal, new_bed_number: e.target.value })}
+                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-purple-500 font-mono"
+              >
+                {[1, 2, 3, 4].map(b => (
+                  <option key={b} value={b}>Bed Spot {b}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-dark-border light:border-slate-200">
+              <button
+                type="button"
+                onClick={() => setChangeBedModal(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-purple-500/25 transition-all"
+              >
+                Confirm Bed Transfer
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* EDIT ROOM MODAL */}
+      {editRoomModal && (
+        <Modal
+          isOpen={Boolean(editRoomModal)}
+          onClose={() => setEditRoomModal(null)}
+          title={`Edit Room ${editRoomModal.room_number}`}
+          subtitle="Modify room number, capacity, floor, type, and monthly rent"
+          icon={Pencil}
+          themeClass="from-purple-600 to-indigo-600"
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (onEditRoom) {
+                await onEditRoom(editRoomModal.room_id, editRoomModal);
+              }
+              setEditRoomModal(null);
+              setSelectedRoom(null);
+            }}
+            className="space-y-4 font-body"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  Room Number <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editRoomModal.room_number}
+                  onChange={(e) => setEditRoomModal({ ...editRoomModal, room_number: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  Hostel Block <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={editRoomModal.hostel_id}
+                  onChange={(e) => setEditRoomModal({ ...editRoomModal, hostel_id: Number(e.target.value) })}
+                  className="w-full px-3 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                >
+                  {hostels.map(h => (
+                    <option key={getHostelId(h)} value={getHostelId(h)}>
+                      {getHostelName(h)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  Capacity (Beds)
+                </label>
+                <select
+                  value={editRoomModal.capacity}
+                  onChange={(e) => setEditRoomModal({ ...editRoomModal, capacity: Number(e.target.value) })}
+                  className="w-full px-3 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-purple-500 font-mono"
+                >
+                  <option value={1}>1 Bed</option>
+                  <option value={2}>2 Beds</option>
+                  <option value={3}>3 Beds</option>
+                  <option value={4}>4 Beds</option>
+                  <option value={5}>5 Beds</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  Floor Number
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={editRoomModal.floor_number}
+                  onChange={(e) => setEditRoomModal({ ...editRoomModal, floor_number: Number(e.target.value) })}
+                  className="w-full px-3 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-purple-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  Room Type
+                </label>
+                <select
+                  value={editRoomModal.room_type}
+                  onChange={(e) => setEditRoomModal({ ...editRoomModal, room_type: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-purple-500"
+                >
+                  <option value="Single Deluxe">Single Deluxe</option>
+                  <option value="Double Sharing">Double Sharing</option>
+                  <option value="Triple Sharing">Triple Sharing</option>
+                  <option value="Suite">Suite</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                Monthly Rent (LKR)
+              </label>
+              <input
+                type="number"
+                step="500"
+                value={editRoomModal.monthly_rent}
+                onChange={(e) => setEditRoomModal({ ...editRoomModal, monthly_rent: Number(e.target.value) })}
+                className="w-full px-3 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-purple-500 font-mono"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-dark-border light:border-slate-200">
+              <button
+                type="button"
+                onClick={() => setEditRoomModal(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-md"
+              >
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* QUICK ALLOCATE BED MODAL */}
+      {quickAllocateModal && (
+        <Modal
+          isOpen={Boolean(quickAllocateModal)}
+          onClose={() => setQuickAllocateModal(null)}
+          title={`Assign Bed Spot - Room ${quickAllocateModal.room_number}`}
+          subtitle={`Assigning Bed ${quickAllocateModal.bed_number} spot to a registered resident`}
+          icon={Plus}
+          themeClass="from-emerald-600 to-teal-600"
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!quickAllocateModal.student_id) {
+                alert('Please select a student');
+                return;
+              }
+              if (onAllocateRoom) {
+                await onAllocateRoom({
+                  student_id: Number(quickAllocateModal.student_id),
+                  room_id: Number(quickAllocateModal.room_id),
+                  bed_number: Number(quickAllocateModal.bed_number),
+                  allocated_from: quickAllocateModal.allocated_from
+                });
+              }
+              setQuickAllocateModal(null);
+            }}
+            className="space-y-4 font-body"
+          >
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                Select Resident Student <span className="text-rose-500">*</span>
+              </label>
+              <select
+                required
+                value={quickAllocateModal.student_id}
+                onChange={(e) => setQuickAllocateModal({ ...quickAllocateModal, student_id: e.target.value })}
+                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="">-- Choose Student --</option>
+                {students.map(st => {
+                  const sId = st.student_id || st.id;
+                  const isSuspended = st.status === 'Suspended';
+                  return (
+                    <option key={sId} value={sId} disabled={isSuspended}>
+                      {st.full_name || st.name} ({st.admission_no || sId}) {isSuspended ? '⚠️ [SUSPENDED]' : ''}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                Allocation Start Date
+              </label>
+              <input
+                type="date"
+                required
+                value={quickAllocateModal.allocated_from}
+                onChange={(e) => setQuickAllocateModal({ ...quickAllocateModal, allocated_from: e.target.value })}
+                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-dark-border light:border-slate-200">
+              <button
+                type="button"
+                onClick={() => setQuickAllocateModal(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs shadow-lg shadow-emerald-500/25 transition-all"
+              >
+                Assign Bed Spot
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
