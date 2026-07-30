@@ -440,7 +440,7 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                       monthly_rent: getRoomRent(roomToEdit)
                     });
                   }}
-                  className="px-4 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-400 font-bold text-xs border border-purple-500/30 flex items-center gap-1.5 transition-all"
+                  className="px-4 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-400 light:text-purple-600 font-bold text-xs border border-purple-500/30 flex items-center gap-1.5 transition-all"
                 >
                   <Pencil className="w-4 h-4" />
                   <span>Edit Room</span>
@@ -452,7 +452,7 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                     setSelectedRoom(null);
                     if (onDeleteRoom) onDeleteRoom(rId);
                   }}
-                  className="px-4 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 font-bold text-xs border border-rose-500/30 flex items-center gap-1.5 transition-all"
+                  className="px-4 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 light:text-rose-600 font-bold text-xs border border-rose-500/30 flex items-center gap-1.5 transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Delete Room</span>
@@ -461,7 +461,7 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
               <button
                 type="button"
                 onClick={() => setSelectedRoom(null)}
-                className="px-5 py-2 rounded-xl bg-slate-800 light:bg-slate-200 text-slate-200 light:text-slate-800 font-bold text-sm hover:bg-slate-700 transition-all"
+                className="px-5 py-2 rounded-xl bg-slate-800 light:bg-slate-100 text-slate-200 light:text-slate-800 font-bold text-sm hover:bg-slate-700 light:hover:bg-slate-200 border border-slate-700 light:border-slate-300 transition-all"
               >
                 Close Details
               </button>

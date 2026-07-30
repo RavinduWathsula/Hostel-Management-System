@@ -5,10 +5,10 @@ export function Modal({ isOpen, onClose, title, subtitle, icon: Icon, themeClass
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className={`w-full ${maxWidth} max-h-[90vh] flex flex-col bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden transform transition-all`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 light:bg-slate-900/40 backdrop-blur-md animate-fade-in">
+      <div className={`w-full ${maxWidth} max-h-[90vh] flex flex-col bg-slate-900 light:bg-white border border-slate-800 light:border-slate-200 rounded-2xl shadow-2xl overflow-hidden transform transition-all`}>
         {/* Modal Gradient Header */}
-        <div className={`relative px-6 py-5 bg-gradient-to-r ${themeClass} text-white flex items-center justify-between flex-shrink-0`}>
+        <div className={`relative px-6 py-5 bg-gradient-to-r ${themeClass} text-white flex items-center justify-between flex-shrink-0 shadow-sm`}>
           <div className="flex items-center gap-4">
             {Icon && (
               <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white text-xl shadow-lg shrink-0 border border-white/20">
@@ -30,7 +30,7 @@ export function Modal({ isOpen, onClose, title, subtitle, icon: Icon, themeClass
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="p-6 overflow-y-auto flex-1 bg-slate-900 text-slate-100">
+        <div className="p-6 overflow-y-auto flex-1 bg-slate-900 light:bg-white text-slate-100 light:text-slate-900">
           {children}
         </div>
       </div>

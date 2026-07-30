@@ -608,10 +608,17 @@ app.post('/allocations/change-bed', changeBedHandler);
 // ==========================================
 app.get('/api/complaints', async (req, res) => {
   try {
+    try {
+      await db.query("ALTER TABLE complaint ADD COLUMN priority VARCHAR(20) DEFAULT 'Medium'");
+    } catch (e) {}
+
     const [openRows] = await db.query("SELECT *, complaint_id as id FROM vw_open_complaints");
     
     const [allRows] = await db.query(`
-      SELECT c.*, c.complaint_id as id, COALESCE(c.category, 'General') as title, s.full_name as student_name, r.room_number, st.full_name as staff_name
+      SELECT c.*, c.complaint_id as id, 
+             COALESCE(c.priority, 'Medium') as priority,
+             COALESCE(c.category, 'General') as title, 
+             s.full_name as student_name, r.room_number, st.full_name as staff_name
       FROM complaint c
       LEFT JOIN student s ON c.student_id = s.student_id
       LEFT JOIN room r ON c.room_id = r.room_id
@@ -633,7 +640,7 @@ app.get('/api/complaints', async (req, res) => {
 
 app.post('/api/complaints', async (req, res) => {
   try {
-    const { student_id, room_id, category, description, title, assigned_staff_id } = req.body;
+    const { student_id, room_id, category, description, title, priority, assigned_staff_id } = req.body;
     let studentId = student_id ? parseInt(student_id) : null;
     if (!studentId) {
       const [firstStudent] = await db.query("SELECT student_id FROM student LIMIT 1");
@@ -644,15 +651,20 @@ app.post('/api/complaints', async (req, res) => {
 
     const complaintCat = category || 'Maintenance';
     const complaintDesc = description || title || 'No details provided';
+    const complaintPriority = priority || 'Medium';
 
     if (!studentId || !complaintDesc) {
       return res.status(400).json({ success: false, error: 'Student and description are required' });
     }
 
+    try {
+      await db.query("ALTER TABLE complaint ADD COLUMN priority VARCHAR(20) DEFAULT 'Medium'");
+    } catch (e) {}
+
     await db.query(
-      `INSERT INTO complaint (student_id, room_id, category, description, assigned_staff_id)
-       VALUES (?, ?, ?, ?, ?)`,
-      [studentId, room_id || null, complaintCat, complaintDesc, assigned_staff_id || null]
+      `INSERT INTO complaint (student_id, room_id, category, description, priority, status, assigned_staff_id)
+       VALUES (?, ?, ?, ?, ?, 'Pending', ?)`,
+      [studentId, room_id || null, complaintCat, complaintDesc, complaintPriority, assigned_staff_id || null]
     );
 
     res.status(201).json({ success: true, message: 'Complaint raised successfully' });
@@ -661,7 +673,7 @@ app.post('/api/complaints', async (req, res) => {
   }
 });
 
-app.put('/api/complaints/:id/status', async (req, res) => {
+const updateComplaintStatusHandler = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -677,7 +689,32 @@ app.put('/api/complaints/:id/status', async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
-});
+};
+app.put('/api/complaints/:id/status', updateComplaintStatusHandler);
+app.put('/complaints/:id/status', updateComplaintStatusHandler);
+
+const updateComplaintPriorityHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { priority } = req.body;
+    if (!priority) {
+      return res.status(400).json({ success: false, error: 'Priority is required' });
+    }
+    try {
+      await db.query("ALTER TABLE complaint ADD COLUMN priority VARCHAR(20) DEFAULT 'Medium'");
+    } catch (e) {}
+
+    await db.query(
+      "UPDATE complaint SET priority = ? WHERE complaint_id = ?",
+      [priority, id]
+    );
+    res.json({ success: true, message: `Complaint priority updated to ${priority}` });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+app.put('/api/complaints/:id/priority', updateComplaintPriorityHandler);
+app.put('/complaints/:id/priority', updateComplaintPriorityHandler);
 
 app.put('/api/complaints/:id/resolve', async (req, res) => {
   try {

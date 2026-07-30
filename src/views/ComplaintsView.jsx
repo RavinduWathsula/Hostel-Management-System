@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AlertCircle, Plus, CheckCircle, Clock, Wrench } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
-export function ComplaintsView({ complaints = [], students = [], onLogComplaint, onUpdateComplaintStatus }) {
+export function ComplaintsView({ complaints = [], students = [], onLogComplaint, onUpdateComplaintStatus, onUpdateComplaintPriority }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     student_id: '',
@@ -61,57 +61,79 @@ export function ComplaintsView({ complaints = [], students = [], onLogComplaint,
                   </td>
                 </tr>
               ) : (
-                complaints.map(c => (
-                  <tr key={c.id} className="hover:bg-dark-hover light:hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-slate-100 light:text-slate-900">{c.title}</div>
-                      <div className="text-xs text-slate-400 light:text-slate-500 line-clamp-1 mt-0.5">{c.description}</div>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-semibold text-slate-300 light:text-slate-700">
-                      {c.student_name || 'Anonymous Resident'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                        {c.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${
-                          c.priority === 'High'
-                            ? 'bg-rose-500/15 text-rose-500 border border-rose-500/20'
-                            : 'bg-amber-500/15 text-amber-500 border border-amber-500/20'
-                        }`}
-                      >
-                        {c.priority}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${
-                          c.status === 'Resolved'
-                            ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/20'
-                            : c.status === 'In Progress'
-                            ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
-                            : 'bg-rose-500/15 text-rose-400 border border-rose-500/20'
-                        }`}
-                      >
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <select
-                        value={c.status}
-                        onChange={(e) => onUpdateComplaintStatus(c.id, e.target.value)}
-                        className="px-2.5 py-1 bg-dark-input light:bg-slate-100 border border-dark-border light:border-slate-300 rounded-lg text-xs text-slate-200 light:text-slate-800 font-semibold focus:outline-none focus:border-blue-500"
-                      >
-                        <option value="Open">Open</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Resolved">Resolved</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))
+                complaints.map(c => {
+                  const rawPriority = c.priority || 'Medium';
+                  const normPriority = rawPriority.charAt(0).toUpperCase() + rawPriority.slice(1).toLowerCase();
+                  
+                  const isHighPriority = normPriority === 'High' || normPriority === 'Urgent';
+                  const isMediumPriority = normPriority === 'Medium';
+                  
+                  const rawStatus = c.status || 'Open';
+                  const displayStatus = (rawStatus === 'Pending' || rawStatus === 'Open') ? 'Open' : rawStatus;
+
+                  return (
+                    <tr key={c.id || c.complaint_id} className="hover:bg-dark-hover light:hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-slate-100 light:text-slate-900">{c.title || c.category || 'Complaint'}</div>
+                        <div className="text-xs text-slate-400 light:text-slate-500 line-clamp-1 mt-0.5">{c.description || 'No description provided'}</div>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-semibold text-slate-300 light:text-slate-700">
+                        {c.student_name || 'Anonymous Resident'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-3 py-1 text-xs font-extrabold rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30 whitespace-nowrap shadow-sm">
+                          {c.category || 'General'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={normPriority}
+                          onChange={(e) => {
+                            if (onUpdateComplaintPriority) {
+                              onUpdateComplaintPriority(c.id || c.complaint_id, e.target.value);
+                            }
+                          }}
+                          className={`px-3 py-1 text-xs font-extrabold rounded-full whitespace-nowrap shadow-sm border focus:outline-none cursor-pointer transition-all ${
+                            isHighPriority
+                              ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30'
+                              : isMediumPriority
+                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                              : 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30'
+                          }`}
+                        >
+                          <option value="Low" className="bg-slate-900 light:bg-white text-slate-100 light:text-slate-900 font-semibold">Low</option>
+                          <option value="Medium" className="bg-slate-900 light:bg-white text-slate-100 light:text-slate-900 font-semibold">Medium</option>
+                          <option value="High" className="bg-slate-900 light:bg-white text-slate-100 light:text-slate-900 font-semibold">High</option>
+                          <option value="Urgent" className="bg-slate-900 light:bg-white text-slate-100 light:text-slate-900 font-semibold">Urgent</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-3 py-1 text-xs font-extrabold rounded-full whitespace-nowrap shadow-sm ${
+                            displayStatus === 'Resolved'
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                              : displayStatus === 'In Progress'
+                              ? 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30'
+                              : 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30'
+                          }`}
+                        >
+                          {displayStatus}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <select
+                          value={displayStatus}
+                          onChange={(e) => onUpdateComplaintStatus(c.id || c.complaint_id, e.target.value)}
+                          className="px-3 py-1.5 bg-dark-input light:bg-slate-100 border border-dark-border light:border-slate-300 rounded-xl text-xs text-slate-100 light:text-slate-900 font-bold focus:outline-none focus:border-blue-500 shadow-sm cursor-pointer"
+                        >
+                          <option value="Open">Open</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Resolved">Resolved</option>
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

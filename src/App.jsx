@@ -258,15 +258,42 @@ export function AppContent() {
       body: JSON.stringify(complaintData)
     });
     const data = await res.json();
-    if (data.success) fetchAllData();
+    if (data.success) {
+      const studentObj = students.find(s => String(s.student_id || s.id) === String(complaintData.student_id));
+      const newRecord = {
+        id: data.insertId || Date.now(),
+        complaint_id: data.insertId || Date.now(),
+        category: complaintData.category || 'Maintenance',
+        title: complaintData.title || complaintData.category || 'Complaint',
+        description: complaintData.description || 'No details provided',
+        priority: complaintData.priority || 'Medium',
+        status: 'Open',
+        student_name: studentObj ? (studentObj.full_name || studentObj.name) : 'Anonymous Resident'
+      };
+      setComplaints(prev => [newRecord, ...prev]);
+      fetchAllData();
+    }
     return data;
   };
 
   const handleUpdateComplaintStatus = async (id, status) => {
+    setComplaints(prev => prev.map(c => (String(c.complaint_id || c.id) === String(id) ? { ...c, status } : c)));
     const res = await fetch(`/api/complaints/${id}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
+    });
+    const data = await res.json();
+    if (data.success) fetchAllData();
+    return data;
+  };
+
+  const handleUpdateComplaintPriority = async (id, priority) => {
+    setComplaints(prev => prev.map(c => (String(c.complaint_id || c.id) === String(id) ? { ...c, priority } : c)));
+    const res = await fetch(`/api/complaints/${id}/priority`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priority })
     });
     const data = await res.json();
     if (data.success) fetchAllData();
@@ -477,6 +504,7 @@ export function AppContent() {
               students={students}
               onLogComplaint={handleLogComplaint}
               onUpdateComplaintStatus={handleUpdateComplaintStatus}
+              onUpdateComplaintPriority={handleUpdateComplaintPriority}
             />
           )}
 
