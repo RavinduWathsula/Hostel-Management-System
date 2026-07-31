@@ -2,19 +2,46 @@ import React, { useState } from 'react';
 import { CalendarDays, Plus, Check, X, Clock } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
-export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdateLeaveStatus }) {
+export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdateLeaveStatus, searchTerm = '' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const todayStr = new Date().toLocaleDateString('sv');
+
+  const query = searchTerm.toLowerCase().trim();
+  const filteredLeaves = leaves.filter(l => {
+    if (!query) return true;
+    return (
+      (l.student_name || '').toLowerCase().includes(query) ||
+      (l.admission_no || '').toLowerCase().includes(query) ||
+      (l.reason || '').toLowerCase().includes(query) ||
+      (l.status || '').toLowerCase().includes(query)
+    );
+  });
+
   const [formData, setFormData] = useState({
     student_id: '',
-    from_date: new Date().toISOString().substring(0, 10),
-    to_date: new Date().toISOString().substring(0, 10),
+    from_date: '',
+    to_date: '',
     reason: '',
     emergency_contact: ''
   });
 
+  const handleOpenModal = () => {
+    setFormData({
+      student_id: '',
+      from_date: '',
+      to_date: '',
+      reason: '',
+      emergency_contact: ''
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.student_id || !formData.reason) return;
+    if (!formData.student_id || !formData.from_date || !formData.to_date || !formData.reason) {
+      alert('Please fill in all required fields including student, dates, and reason.');
+      return;
+    }
     await onRequestLeave(formData);
     setIsModalOpen(false);
   };
@@ -32,7 +59,7 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenModal}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-sm shadow-lg shadow-purple-500/25 transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -46,33 +73,33 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
             <thead className="bg-slate-900/60 light:bg-slate-100 text-slate-400 light:text-slate-600 text-xs font-bold uppercase tracking-wider border-b border-dark-border light:border-slate-200">
               <tr>
                 <th className="px-6 py-4">Student</th>
-                <th className="px-6 py-4">Leave Duration</th>
+                <th className="px-6 py-4 whitespace-nowrap">Leave Duration</th>
                 <th className="px-6 py-4">Reason</th>
-                <th className="px-6 py-4">Emergency Contact</th>
+                <th className="px-6 py-4 whitespace-nowrap">Emergency Contact</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border light:divide-slate-200">
-              {leaves.length === 0 ? (
+              {filteredLeaves.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-12 text-center text-slate-400 light:text-slate-500">
-                    No leave applications logged.
+                    No leave applications matching search criteria.
                   </td>
                 </tr>
               ) : (
-                leaves.map(l => (
-                  <tr key={l.id} className="hover:bg-dark-hover light:hover:bg-slate-50 transition-colors">
+                filteredLeaves.map(l => (
+                  <tr key={l.id || l.leave_id} className="hover:bg-dark-hover light:hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 font-bold text-slate-100 light:text-slate-900">
                       {l.student_name} ({l.admission_no})
                     </td>
-                    <td className="px-6 py-4 text-xs font-medium text-slate-300 light:text-slate-700">
+                    <td className="px-6 py-4 text-xs font-medium text-slate-300 light:text-slate-700 whitespace-nowrap">
                       {l.from_date?.substring(0, 10)} → {l.to_date?.substring(0, 10)}
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-400 light:text-slate-600 max-w-xs truncate">
                       {l.reason}
                     </td>
-                    <td className="px-6 py-4 text-xs font-mono text-slate-300 light:text-slate-700">
+                    <td className="px-6 py-4 text-xs font-mono text-slate-300 light:text-slate-700 whitespace-nowrap">
                       {l.emergency_contact || 'N/A'}
                     </td>
                     <td className="px-6 py-4">
@@ -88,17 +115,27 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
                         {l.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
                       {l.status === 'Pending' ? (
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => onUpdateLeaveStatus(l.id, 'Approved')}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const leaveId = l.id || l.leave_id;
+                              if (onUpdateLeaveStatus && leaveId) onUpdateLeaveStatus(leaveId, 'Approved');
+                            }}
                             className="px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500 hover:text-white font-bold text-xs transition-colors flex items-center gap-1"
                           >
                             <Check className="w-3.5 h-3.5" /> Approve
                           </button>
                           <button
-                            onClick={() => onUpdateLeaveStatus(l.id, 'Rejected')}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const leaveId = l.id || l.leave_id;
+                              if (onUpdateLeaveStatus && leaveId) onUpdateLeaveStatus(leaveId, 'Rejected');
+                            }}
                             className="px-3 py-1 rounded-lg bg-rose-500/15 text-rose-500 hover:bg-rose-500 hover:text-white font-bold text-xs transition-colors flex items-center gap-1"
                           >
                             <X className="w-3.5 h-3.5" /> Reject
@@ -150,6 +187,7 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
               <input
                 type="date"
                 required
+                min={todayStr}
                 value={formData.from_date}
                 onChange={(e) => setFormData({ ...formData, from_date: e.target.value })}
                 className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-purple-500"
@@ -163,6 +201,7 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
               <input
                 type="date"
                 required
+                min={formData.from_date || todayStr}
                 value={formData.to_date}
                 onChange={(e) => setFormData({ ...formData, to_date: e.target.value })}
                 className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-purple-500"

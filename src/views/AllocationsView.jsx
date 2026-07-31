@@ -2,9 +2,21 @@ import React, { useState } from 'react';
 import { KeyRound, Plus, Building2, User, Calendar, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
-export function AllocationsView({ allocations = [], students = [], hostels = [], rooms = [], onAllocateRoom }) {
+export function AllocationsView({ allocations = [], students = [], hostels = [], rooms = [], onAllocateRoom, searchTerm = '' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const query = searchTerm.toLowerCase().trim();
+  const filteredAllocations = allocations.filter(a => {
+    if (!query) return true;
+    return (
+      (a.student_name || '').toLowerCase().includes(query) ||
+      (a.admission_no || '').toLowerCase().includes(query) ||
+      (a.hostel_name || '').toLowerCase().includes(query) ||
+      String(a.room_number || '').toLowerCase().includes(query) ||
+      (a.status || '').toLowerCase().includes(query)
+    );
+  });
 
   const getStudentId = (s) => s.student_id || s.id;
   const getStudentName = (s) => s.full_name || s.name || `Student ${getStudentId(s)}`;
@@ -112,14 +124,14 @@ export function AllocationsView({ allocations = [], students = [], hostels = [],
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border light:divide-slate-200">
-              {allocations.length === 0 ? (
+              {filteredAllocations.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-12 text-center text-slate-400 light:text-slate-500">
-                    No active room allocations recorded. Click "Allocate New Room" to assign a resident.
+                    No active room allocations matching search criteria.
                   </td>
                 </tr>
               ) : (
-                allocations.map(acc => {
+                filteredAllocations.map(acc => {
                   const rawDate = acc.allocated_date || acc.allocated_from || acc.created_at;
                   const formattedDate = rawDate ? String(rawDate).substring(0, 10) : new Date().toISOString().substring(0, 10);
                   const studentObj = students.find(s => String(s.student_id || s.id) === String(acc.student_id));

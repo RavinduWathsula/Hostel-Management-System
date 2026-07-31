@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AlertCircle, Plus, CheckCircle, Clock, Wrench } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
-export function ComplaintsView({ complaints = [], students = [], onLogComplaint, onUpdateComplaintStatus, onUpdateComplaintPriority }) {
+export function ComplaintsView({ complaints = [], students = [], onLogComplaint, onUpdateComplaintStatus, onUpdateComplaintPriority, searchTerm = '' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     student_id: '',
@@ -10,6 +10,19 @@ export function ComplaintsView({ complaints = [], students = [], onLogComplaint,
     title: '',
     description: '',
     priority: 'Medium'
+  });
+
+  const query = searchTerm.toLowerCase().trim();
+  const filteredComplaints = complaints.filter(c => {
+    if (!query) return true;
+    return (
+      (c.student_name || '').toLowerCase().includes(query) ||
+      (c.category || '').toLowerCase().includes(query) ||
+      (c.title || '').toLowerCase().includes(query) ||
+      (c.description || '').toLowerCase().includes(query) ||
+      (c.status || '').toLowerCase().includes(query) ||
+      (c.priority || '').toLowerCase().includes(query)
+    );
   });
 
   const handleSubmit = async (e) => {
@@ -45,7 +58,7 @@ export function ComplaintsView({ complaints = [], students = [], onLogComplaint,
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-900/60 light:bg-slate-100 text-slate-400 light:text-slate-600 text-xs font-bold uppercase tracking-wider border-b border-dark-border light:border-slate-200">
               <tr>
-                <th className="px-6 py-4">Title & Details</th>
+                <th className="px-6 py-4">Complaint Details</th>
                 <th className="px-6 py-4">Resident</th>
                 <th className="px-6 py-4">Category</th>
                 <th className="px-6 py-4">Priority</th>
@@ -54,14 +67,14 @@ export function ComplaintsView({ complaints = [], students = [], onLogComplaint,
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border light:divide-slate-200">
-              {complaints.length === 0 ? (
+              {filteredComplaints.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-12 text-center text-slate-400 light:text-slate-500">
-                    No complaints logged.
+                    No complaints matching search criteria.
                   </td>
                 </tr>
               ) : (
-                complaints.map(c => {
+                filteredComplaints.map(c => {
                   const rawPriority = c.priority || 'Medium';
                   const normPriority = rawPriority.charAt(0).toUpperCase() + rawPriority.slice(1).toLowerCase();
                   

@@ -3,7 +3,7 @@ import { CreditCard, Plus, Receipt, Wallet, Search, CheckCircle, AlertCircle } f
 import { Modal } from '../components/common/Modal';
 import { KpiCard } from '../components/common/KpiCard';
 
-export function FeesView({ feeSummary = [], feePayments = [], students = [], onRecordFee }) {
+export function FeesView({ feeSummary = [], feePayments = [], students = [], onRecordFee, searchTerm = '' }) {
   const [activeTab, setActiveTab] = useState('payments'); // 'payments' | 'dues'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,9 +52,12 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
     }
   };
 
+  const effectiveSearch = (searchTerm || searchQuery).toLowerCase().trim();
+
   // Filter payments
   const filteredPayments = feePayments.filter(p => {
-    const query = searchQuery.toLowerCase();
+    const query = effectiveSearch;
+    if (!query) return true;
     const studentName = (p.student_name || p.full_name || '').toLowerCase();
     const admissionNo = (p.admission_no || '').toLowerCase();
     const receiptNo = (p.receipt_no || '').toLowerCase();
@@ -64,7 +67,8 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
 
   // Filter summaries
   const filteredSummaries = feeSummary.filter(s => {
-    const query = searchQuery.toLowerCase();
+    const query = effectiveSearch;
+    if (!query) return true;
     const studentName = (s.full_name || '').toLowerCase();
     const admissionNo = (s.admission_no || '').toLowerCase();
     return studentName.includes(query) || admissionNo.includes(query);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Building2, Plus, BedDouble, Users, Home, DollarSign, Eye, CheckCircle2, Phone, Sparkles, User, Info, Heart, Trash2, ArrowLeftRight, LogOut, Pencil } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
-export function RoomsView({ hostels = [], rooms = [], students = [], allocations = [], onAddRoom, onEditRoom, onAddHostel, onDeleteRoom, onVacateRoom, onChangeBed, onAllocateRoom, onNavigateToAllocation }) {
+export function RoomsView({ hostels = [], rooms = [], students = [], allocations = [], onAddRoom, onEditRoom, onAddHostel, onDeleteRoom, onVacateRoom, onChangeBed, onAllocateRoom, onNavigateToAllocation, searchTerm = '' }) {
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [isHostelModalOpen, setIsHostelModalOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -33,9 +33,16 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
   const activeHostelId = selectedHostelId || (hostels.length > 0 ? getHostelId(hostels[0]) : null);
   const activeHostelObj = hostels.find(h => String(getHostelId(h)) === String(activeHostelId)) || hostels[0];
 
-  const filteredRooms = activeHostelId
-    ? rooms.filter(r => String(r.hostel_id) === String(activeHostelId))
-    : rooms;
+  const query = searchTerm.toLowerCase().trim();
+  const filteredRooms = rooms.filter(r => {
+    const matchesHostel = query ? true : (activeHostelId ? String(r.hostel_id) === String(activeHostelId) : true);
+    const matchesSearch = !query ? true : (
+      String(r.room_number || '').toLowerCase().includes(query) ||
+      String(r.room_type || '').toLowerCase().includes(query) ||
+      String(r.hostel_name || '').toLowerCase().includes(query)
+    );
+    return matchesHostel && matchesSearch;
+  });
 
   const formatLKR = (amount) => {
     return new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR', maximumFractionDigits: 0 }).format(amount || 0);

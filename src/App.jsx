@@ -361,44 +361,82 @@ export function AppContent() {
 
   // Leave Handlers
   const handleRequestLeave = async (leaveData) => {
-    const res = await fetch('/api/leaves', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(leaveData)
-    });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
+    try {
+      const res = await fetch('/api/leaves', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(leaveData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to submit leave request');
+      }
+      return data;
+    } catch (err) {
+      alert('Error submitting leave request: ' + err.message);
+      return { success: false, error: err.message };
+    }
   };
 
   const handleUpdateLeaveStatus = async (id, status) => {
-    const res = await fetch(`/api/leaves/${id}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
-    });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
+    try {
+      setLeaves(prev => prev.map(l => (String(l.id || l.leave_id) === String(id) ? { ...l, status } : l)));
+      const res = await fetch(`/api/leaves/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to update leave status');
+        await fetchAllData();
+      }
+      return data;
+    } catch (err) {
+      alert('Error updating leave status: ' + err.message);
+      return { success: false, error: err.message };
+    }
   };
 
   // Visitor Handlers
   const handleLogVisitor = async (visitorData) => {
-    const res = await fetch('/api/visitors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(visitorData)
-    });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
+    try {
+      const res = await fetch('/api/visitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(visitorData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to log visitor entry');
+      }
+      return data;
+    } catch (err) {
+      alert('Error logging visitor entry: ' + err.message);
+      return { success: false, error: err.message };
+    }
   };
 
   const handleCheckoutVisitor = async (id) => {
-    const res = await fetch(`/api/visitors/${id}/checkout`, { method: 'PUT' });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
+    try {
+      const res = await fetch(`/api/visitors/${id}/checkout`, { method: 'PUT' });
+      const data = await res.json();
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to check out visitor');
+      }
+      return data;
+    } catch (err) {
+      alert('Error checking out visitor: ' + err.message);
+      return { success: false, error: err.message };
+    }
   };
 
   // Attendance Handlers
@@ -475,6 +513,11 @@ export function AppContent() {
           onMobileMenuClick={() => setMobileOpen(true)}
           searchTerm={globalSearch}
           setSearchTerm={setGlobalSearch}
+          onNavigate={setCurrentView}
+          students={students}
+          rooms={rooms}
+          staff={staff}
+          feePayments={feePayments}
           dbOnline={dbOnline}
         />
 
@@ -505,6 +548,7 @@ export function AppContent() {
               rooms={rooms}
               students={students}
               allocations={allocations}
+              searchTerm={globalSearch}
               onAddRoom={handleAddRoom}
               onEditRoom={handleEditRoom}
               onAddHostel={handleAddHostel}
@@ -520,6 +564,7 @@ export function AppContent() {
             <StudentsView
               students={students}
               hostels={hostels}
+              searchTerm={globalSearch}
               onAddStudent={handleAddStudent}
               onEditStudent={handleEditStudent}
               onDeleteStudent={handleDeleteStudent}
@@ -532,6 +577,7 @@ export function AppContent() {
               students={students}
               hostels={hostels}
               rooms={rooms}
+              searchTerm={globalSearch}
               onAllocateRoom={handleAllocateRoom}
             />
           )}
@@ -541,6 +587,7 @@ export function AppContent() {
               feeSummary={feeSummary}
               feePayments={feePayments}
               students={students}
+              searchTerm={globalSearch}
               onRecordFee={handleRecordFee}
             />
           )}
@@ -549,6 +596,7 @@ export function AppContent() {
             <ComplaintsView
               complaints={complaints}
               students={students}
+              searchTerm={globalSearch}
               onLogComplaint={handleLogComplaint}
               onUpdateComplaintStatus={handleUpdateComplaintStatus}
               onUpdateComplaintPriority={handleUpdateComplaintPriority}
@@ -559,6 +607,7 @@ export function AppContent() {
             <StaffView
               hostels={hostels}
               staff={staff}
+              searchTerm={globalSearch}
               onAddStaff={handleAddStaff}
               onEditStaff={handleEditStaff}
               onDeleteStaff={handleDeleteStaff}
@@ -569,6 +618,7 @@ export function AppContent() {
             <LeavesView
               leaves={leaves}
               students={students}
+              searchTerm={globalSearch}
               onRequestLeave={handleRequestLeave}
               onUpdateLeaveStatus={handleUpdateLeaveStatus}
             />
@@ -578,6 +628,7 @@ export function AppContent() {
             <VisitorsView
               visitors={visitors}
               students={students}
+              searchTerm={globalSearch}
               onLogVisitor={handleLogVisitor}
               onCheckoutVisitor={handleCheckoutVisitor}
             />
@@ -586,6 +637,7 @@ export function AppContent() {
           {currentView === 'attendance' && (
             <AttendanceView
               students={students}
+              searchTerm={globalSearch}
               onSaveAttendance={handleSaveAttendance}
               onLoadStudentChart={handleLoadStudentChart}
             />

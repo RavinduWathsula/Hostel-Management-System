@@ -810,51 +810,82 @@ app.post('/api/fees/payments', handlePostPayment);
 // ==========================================
 // 6. VISITOR LOG API
 // ==========================================
-app.get('/api/visitors', async (req, res) => {
+const handleGetVisitorsServer = async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT v.*, v.visitor_id as id, s.full_name as student_name, s.admission_no
+      SELECT 
+        v.*, 
+        v.visitor_id as id, 
+        s.full_name as student_name, 
+        s.admission_no,
+        CONCAT(DATE_FORMAT(COALESCE(v.visit_date, CURRENT_DATE), '%Y-%m-%d'), ' ', COALESCE(TIME_FORMAT(v.time_in, '%H:%i'), '')) as check_in_time,
+        CASE 
+          WHEN v.time_out IS NOT NULL THEN CONCAT(DATE_FORMAT(COALESCE(v.visit_date, CURRENT_DATE), '%Y-%m-%d'), ' ', TIME_FORMAT(v.time_out, '%H:%i'))
+          ELSE NULL 
+        END as check_out_time
       FROM visitor_log v
-      JOIN student s ON v.student_id = s.student_id
+      LEFT JOIN student s ON v.student_id = s.student_id
       ORDER BY v.visitor_id DESC
     `);
     res.json({ success: true, data: rows, visitors: rows });
   } catch (error) {
+    console.error('Error fetching visitors:', error);
     res.status(500).json({ success: false, error: error.message });
   }
-});
+};
+app.get('/api/visitors', handleGetVisitorsServer);
+app.get('/visitors', handleGetVisitorsServer);
 
-app.post('/api/visitors', async (req, res) => {
+const handlePostVisitorServer = async (req, res) => {
   try {
     const { student_id, visitor_name, relation, phone, purpose } = req.body;
-    if (!student_id || !visitor_name || !phone) {
-      return res.status(400).json({ success: false, error: 'Required fields missing' });
+    if (!visitor_name || !phone) {
+      return res.status(400).json({ success: false, error: 'Visitor name and phone number are required' });
     }
 
-    await db.query(
-      `INSERT INTO visitor_log (student_id, visitor_name, relation, phone, time_in, purpose)
-       VALUES (?, ?, ?, ?, CURRENT_TIME, ?)`,
-      [student_id, visitor_name, relation || null, phone, purpose || null]
+    try {
+      await db.query("ALTER TABLE visitor_log MODIFY COLUMN student_id INT NULL");
+    } catch (e) {}
+
+    let studentIdVal = student_id && String(student_id).trim() !== '' ? parseInt(student_id, 10) : null;
+    if (!studentIdVal) {
+      const [firstSt] = await db.query("SELECT student_id FROM student LIMIT 1");
+      if (firstSt.length > 0) studentIdVal = firstSt[0].student_id;
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO visitor_log (student_id, visitor_name, relation, phone, visit_date, time_in, purpose)
+       VALUES (?, ?, ?, ?, CURRENT_DATE, CURRENT_TIME, ?)`,
+      [studentIdVal, String(visitor_name).trim(), relation ? String(relation).trim() : null, String(phone).trim(), purpose ? String(purpose).trim() : null]
     );
 
-    res.status(201).json({ success: true, message: 'Visitor checked in successfully' });
+    res.status(201).json({ success: true, message: 'Visitor checked in successfully', id: result.insertId });
   } catch (error) {
+    console.error('Error logging visitor entry:', error);
     res.status(500).json({ success: false, error: error.message });
   }
-});
+};
+app.post('/api/visitors', handlePostVisitorServer);
+app.post('/visitors', handlePostVisitorServer);
 
-app.put('/api/visitors/:id/checkout', async (req, res) => {
+const handleCheckoutVisitorServer = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ success: false, error: 'Visitor ID is required' });
+    }
     await db.query(
       "UPDATE visitor_log SET time_out = CURRENT_TIME WHERE visitor_id = ?",
       [id]
     );
     res.json({ success: true, message: 'Visitor checked out successfully' });
   } catch (error) {
+    console.error('Error checking out visitor:', error);
     res.status(500).json({ success: false, error: error.message });
   }
-});
+};
+app.put('/api/visitors/:id/checkout', handleCheckoutVisitorServer);
+app.put('/visitors/:id/checkout', handleCheckoutVisitorServer);
 
 // ==========================================
 // 7. STAFF API
@@ -999,42 +1030,57 @@ app.get('/api/leaves', async (req, res) => {
   }
 });
 
-app.post('/api/leaves', async (req, res) => {
+const handlePostLeaveServer = async (req, res) => {
   try {
-    const { student_id, from_date, to_date, reason } = req.body;
+    const { student_id, from_date, to_date, reason, emergency_contact } = req.body;
     if (!student_id || !from_date || !to_date) {
       return res.status(400).json({ success: false, error: 'Required fields missing' });
     }
 
+    try {
+      await db.query("ALTER TABLE leave_application ADD COLUMN emergency_contact VARCHAR(50)");
+    } catch (e) {}
+
     await db.query(
-      `INSERT INTO leave_application (student_id, from_date, to_date, reason)
-       VALUES (?, ?, ?, ?)`,
-      [student_id, from_date, to_date, reason || null]
+      `INSERT INTO leave_application (student_id, from_date, to_date, reason, emergency_contact)
+       VALUES (?, ?, ?, ?, ?)`,
+      [student_id, from_date, to_date, reason || null, emergency_contact || null]
     );
 
     res.status(201).json({ success: true, message: 'Leave application submitted' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
-});
+};
+app.post('/api/leaves', handlePostLeaveServer);
+app.post('/leaves', handlePostLeaveServer);
 
-app.put('/api/leaves/:id/status', async (req, res) => {
+const handleUpdateLeaveStatusServer = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, approved_by } = req.body; // status: 'Approved' or 'Rejected'
-    if (!status || !approved_by) {
-      return res.status(400).json({ success: false, error: 'Status and Approving Warden ID are required' });
+    const { status, approved_by } = req.body;
+    if (!status) {
+      return res.status(400).json({ success: false, error: 'Status is required' });
+    }
+
+    let staffId = approved_by || null;
+    if (staffId) {
+      const [st] = await db.query("SELECT staff_id FROM staff WHERE staff_id = ?", [staffId]);
+      if (st.length === 0) staffId = null;
     }
 
     await db.query(
       "UPDATE leave_application SET status = ?, approved_by = ? WHERE leave_id = ?",
-      [status, approved_by, id]
+      [status, staffId, id]
     );
     res.json({ success: true, message: `Leave application status updated to ${status}` });
   } catch (error) {
+    console.error('Error updating leave status:', error);
     res.status(500).json({ success: false, error: error.message });
   }
-});
+};
+app.put('/api/leaves/:id/status', handleUpdateLeaveStatusServer);
+app.put('/leaves/:id/status', handleUpdateLeaveStatusServer);
 
 // ==========================================
 // 9. ATTENDANCE API

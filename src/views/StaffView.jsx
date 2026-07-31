@@ -2,9 +2,21 @@ import React, { useState } from 'react';
 import { UserCheck, Plus, Phone, Mail, Edit, Trash2 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
-export function StaffView({ staff = [], hostels = [], onAddStaff, onEditStaff, onDeleteStaff }) {
+export function StaffView({ staff = [], hostels = [], onAddStaff, onEditStaff, onDeleteStaff, searchTerm = '' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
+
+  const query = searchTerm.toLowerCase().trim();
+  const filteredStaff = staff.filter(s => {
+    if (!query) return true;
+    return (
+      (s.full_name || '').toLowerCase().includes(query) ||
+      (s.role || s.designation || '').toLowerCase().includes(query) ||
+      (s.phone || '').toLowerCase().includes(query) ||
+      (s.email || '').toLowerCase().includes(query) ||
+      (s.hostel_name || '').toLowerCase().includes(query)
+    );
+  });
 
   const initialForm = {
     full_name: '',
@@ -105,14 +117,14 @@ export function StaffView({ staff = [], hostels = [], onAddStaff, onEditStaff, o
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border light:divide-slate-200">
-              {staff.length === 0 ? (
+              {filteredStaff.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-6 py-12 text-center text-slate-400 light:text-slate-500">
-                    No staff members registered.
+                    No staff members matching search criteria.
                   </td>
                 </tr>
               ) : (
-                staff.map(s => (
+                filteredStaff.map(s => (
                   <tr key={s.id || s.staff_id} className="hover:bg-dark-hover light:hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 font-bold text-slate-100 light:text-slate-900">
                       {s.full_name}

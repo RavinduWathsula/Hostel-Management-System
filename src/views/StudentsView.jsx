@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Users, Plus, Search, Filter, Edit, Trash2, Phone, Mail, User, Contact, Calendar, BookOpen, GraduationCap, Home } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
-export function StudentsView({ students = [], hostels = [], onAddStudent, onEditStudent, onDeleteStudent }) {
-  const [searchTerm, setSearchTerm] = useState('');
+export function StudentsView({ students = [], hostels = [], onAddStudent, onEditStudent, onDeleteStudent, searchTerm: externalSearchTerm = '' }) {
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
+  const searchTerm = externalSearchTerm || localSearchTerm;
   const [hostelFilter, setHostelFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);

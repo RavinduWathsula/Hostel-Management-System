@@ -2,22 +2,60 @@ import React, { useState } from 'react';
 import { UserPlus, Plus, Clock, LogOut, Phone, ShieldCheck } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
-export function VisitorsView({ visitors = [], students = [], onLogVisitor, onCheckoutVisitor }) {
+export function VisitorsView({ visitors = [], students = [], onLogVisitor, onCheckoutVisitor, searchTerm = '' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     visitor_name: '',
     relation: '',
     student_id: '',
     phone: '',
-    purpose: '',
-    check_in_time: new Date().toISOString().substring(0, 16)
+    purpose: ''
   });
+
+  const query = searchTerm.toLowerCase().trim();
+  const filteredVisitors = visitors.filter(v => {
+    if (!query) return true;
+    return (
+      (v.visitor_name || '').toLowerCase().includes(query) ||
+      (v.student_name || '').toLowerCase().includes(query) ||
+      (v.admission_no || '').toLowerCase().includes(query) ||
+      (v.phone || '').toLowerCase().includes(query) ||
+      (v.relation || '').toLowerCase().includes(query) ||
+      (v.purpose || '').toLowerCase().includes(query)
+    );
+  });
+
+  const handleOpenModal = () => {
+    setFormData({
+      visitor_name: '',
+      relation: '',
+      student_id: '',
+      phone: '',
+      purpose: ''
+    });
+    setIsModalOpen(true);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.visitor_name || !formData.phone) return;
+    if (!formData.visitor_name || !formData.phone) {
+      alert('Please fill in required fields: Guest Name and Phone Number.');
+      return;
+    }
     await onLogVisitor(formData);
     setIsModalOpen(false);
+  };
+
+  const formatDateTime = (dateVal, timeVal, checkVal) => {
+    if (checkVal && typeof checkVal === 'string' && checkVal.trim() !== '') {
+      return checkVal.replace('T', ' ').substring(0, 16);
+    }
+    if (timeVal) {
+      const d = dateVal ? dateVal.substring(0, 10) : '';
+      const t = timeVal.substring(0, 5);
+      return d ? `${d} ${t}` : t;
+    }
+    return null;
   };
 
   return (
@@ -33,7 +71,7 @@ export function VisitorsView({ visitors = [], students = [], onLogVisitor, onChe
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenModal}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-sm shadow-lg shadow-amber-500/25 transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -50,60 +88,70 @@ export function VisitorsView({ visitors = [], students = [], onLogVisitor, onChe
                 <th className="px-6 py-4">Visiting Student</th>
                 <th className="px-6 py-4">Relation / Purpose</th>
                 <th className="px-6 py-4">Contact</th>
-                <th className="px-6 py-4">Check-In</th>
-                <th className="px-6 py-4">Check-Out</th>
+                <th className="px-6 py-4 whitespace-nowrap">Check-In</th>
+                <th className="px-6 py-4 whitespace-nowrap">Check-Out</th>
                 <th className="px-6 py-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border light:divide-slate-200">
-              {visitors.length === 0 ? (
+              {filteredVisitors.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-6 py-12 text-center text-slate-400 light:text-slate-500">
-                    No visitor logs recorded.
+                    No visitor logs matching search criteria.
                   </td>
                 </tr>
               ) : (
-                visitors.map(v => (
-                  <tr key={v.id} className="hover:bg-dark-hover light:hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-slate-100 light:text-slate-900">
-                      {v.visitor_name}
-                    </td>
-                    <td className="px-6 py-4 text-xs font-semibold text-slate-300 light:text-slate-700">
-                      {v.student_name ? `${v.student_name} (${v.admission_no})` : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-xs font-semibold text-slate-200 light:text-slate-800">{v.relation || 'Guest'}</div>
-                      <div className="text-xs text-slate-400 light:text-slate-500">{v.purpose}</div>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-mono text-slate-300 light:text-slate-700">
-                      {v.phone}
-                    </td>
-                    <td className="px-6 py-4 text-xs font-medium text-slate-400 light:text-slate-600">
-                      {v.check_in_time ? v.check_in_time.replace('T', ' ').substring(0, 16) : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 text-xs font-medium">
-                      {v.check_out_time ? (
-                        <span className="text-slate-400 light:text-slate-600">
-                          {v.check_out_time.replace('T', ' ').substring(0, 16)}
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/20">
-                          Still On Premises
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {!v.check_out_time && (
-                        <button
-                          onClick={() => onCheckoutVisitor(v.id)}
-                          className="px-3 py-1 rounded-lg bg-amber-500/15 text-amber-500 hover:bg-amber-500 hover:text-white font-bold text-xs transition-colors inline-flex items-center gap-1"
-                        >
-                          <LogOut className="w-3.5 h-3.5" /> Check Out
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                filteredVisitors.map(v => {
+                  const checkIn = formatDateTime(v.visit_date, v.time_in, v.check_in_time);
+                  const checkOut = formatDateTime(v.visit_date, v.time_out, v.check_out_time);
+                  const visitorId = v.id || v.visitor_id;
+
+                  return (
+                    <tr key={visitorId} className="hover:bg-dark-hover light:hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 font-bold text-slate-100 light:text-slate-900">
+                        {v.visitor_name}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-semibold text-slate-300 light:text-slate-700">
+                        {v.student_name ? `${v.student_name} (${v.admission_no || ''})` : 'General Visitor'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-xs font-semibold text-slate-200 light:text-slate-800">{v.relation || 'Guest'}</div>
+                        {v.purpose && <div className="text-xs text-slate-400 light:text-slate-500">{v.purpose}</div>}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-mono text-slate-300 light:text-slate-700">
+                        {v.phone}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-medium text-slate-300 light:text-slate-700 whitespace-nowrap">
+                        {checkIn || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-medium whitespace-nowrap">
+                        {checkOut ? (
+                          <span className="text-slate-400 light:text-slate-600">
+                            {checkOut}
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/20">
+                            Still On Premises
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        {!checkOut && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onCheckoutVisitor && visitorId) onCheckoutVisitor(visitorId);
+                            }}
+                            className="px-3 py-1 rounded-lg bg-amber-500/15 text-amber-500 hover:bg-amber-500 hover:text-white font-bold text-xs transition-colors inline-flex items-center gap-1"
+                          >
+                            <LogOut className="w-3.5 h-3.5" /> Check Out
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
