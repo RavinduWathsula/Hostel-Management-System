@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { UserCheck, Plus, Phone, Mail, DollarSign, Building } from 'lucide-react';
+import { UserCheck, Plus, Phone, Mail, Edit, Trash2 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
-export function StaffView({ staff = [], hostels = [], onAddStaff }) {
+export function StaffView({ staff = [], hostels = [], onAddStaff, onEditStaff, onDeleteStaff }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [editingStaff, setEditingStaff] = useState(null);
+
+  const initialForm = {
     full_name: '',
     role: 'Warden',
     hostel_id: hostels.length > 0 ? hostels[0].id : '',
@@ -12,7 +14,37 @@ export function StaffView({ staff = [], hostels = [], onAddStaff }) {
     email: '',
     salary: '',
     status: 'Active'
-  });
+  };
+
+  const [formData, setFormData] = useState(initialForm);
+
+  const handleOpenAddModal = () => {
+    setEditingStaff(null);
+    setFormData({
+      full_name: '',
+      role: 'Warden',
+      hostel_id: hostels.length > 0 ? String(hostels[0].id || hostels[0].hostel_id || '') : '',
+      phone: '',
+      email: '',
+      salary: '',
+      status: 'Active'
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (s) => {
+    setEditingStaff(s);
+    setFormData({
+      full_name: s.full_name || '',
+      role: s.role || s.designation || 'Warden',
+      hostel_id: s.hostel_id ? String(s.hostel_id) : '',
+      phone: s.phone || '',
+      email: s.email || '',
+      salary: s.salary || '',
+      status: s.status || 'Active'
+    });
+    setIsModalOpen(true);
+  };
 
   const formatLKR = (amount) => {
     return new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR', maximumFractionDigits: 0 }).format(amount || 0);
@@ -20,9 +52,21 @@ export function StaffView({ staff = [], hostels = [], onAddStaff }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.full_name || !formData.phone) return;
-    await onAddStaff(formData);
-    setIsModalOpen(false);
+    if (!formData.full_name || !formData.phone) {
+      alert('Please fill in required fields: Full Name and Phone Number.');
+      return;
+    }
+    try {
+      if (editingStaff) {
+        const staffId = editingStaff.id || editingStaff.staff_id;
+        if (onEditStaff) await onEditStaff(staffId, formData);
+      } else {
+        if (onAddStaff) await onAddStaff(formData);
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error('Error submitting staff form:', err);
+    }
   };
 
   return (
@@ -38,7 +82,7 @@ export function StaffView({ staff = [], hostels = [], onAddStaff }) {
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenAddModal}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white font-semibold text-sm shadow-lg shadow-teal-500/25 transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -57,24 +101,25 @@ export function StaffView({ staff = [], hostels = [], onAddStaff }) {
                 <th className="px-6 py-4">Contact</th>
                 <th className="px-6 py-4">Salary</th>
                 <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border light:divide-slate-200">
               {staff.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-slate-400 light:text-slate-500">
+                  <td colSpan="7" className="px-6 py-12 text-center text-slate-400 light:text-slate-500">
                     No staff members registered.
                   </td>
                 </tr>
               ) : (
                 staff.map(s => (
-                  <tr key={s.id} className="hover:bg-dark-hover light:hover:bg-slate-50 transition-colors">
+                  <tr key={s.id || s.staff_id} className="hover:bg-dark-hover light:hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 font-bold text-slate-100 light:text-slate-900">
                       {s.full_name}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">
-                        {s.role}
+                      <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20 inline-block">
+                        {s.role || s.designation || 'Staff'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-xs font-semibold text-slate-300 light:text-slate-700">
@@ -94,9 +139,40 @@ export function StaffView({ staff = [], hostels = [], onAddStaff }) {
                       {formatLKR(s.salary)}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${
+                        (s.status || 'Active') === 'Active'
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
+                          : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20'
+                      }`}>
                         {s.status || 'Active'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditModal(s);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          title="Edit Staff Member"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const staffId = s.id || s.staff_id;
+                            if (onDeleteStaff && staffId) onDeleteStaff(staffId);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          title="Delete Staff Member"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -109,8 +185,8 @@ export function StaffView({ staff = [], hostels = [], onAddStaff }) {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Add Staff Member"
-        subtitle="Register wardens, security, and maintenance personnel"
+        title={editingStaff ? "Edit Staff Member" : "Add Staff Member"}
+        subtitle={editingStaff ? "Update details for staff member" : "Register wardens, security, and maintenance personnel"}
         icon={UserCheck}
         themeClass="from-teal-600 to-cyan-600"
       >
@@ -145,6 +221,10 @@ export function StaffView({ staff = [], hostels = [], onAddStaff }) {
                 <option value="Maintenance Technician">Maintenance Technician</option>
                 <option value="Janitor / Cleaner">Janitor / Cleaner</option>
                 <option value="Accountant">Accountant</option>
+                <option value="Security In-Charge">Security In-Charge</option>
+                <option value="Senior Warden">Senior Warden</option>
+                <option value="Lady Warden">Lady Warden</option>
+                <option value="Maintenance Supervisor">Maintenance Supervisor</option>
               </select>
             </div>
 
@@ -159,7 +239,7 @@ export function StaffView({ staff = [], hostels = [], onAddStaff }) {
               >
                 <option value="">All Hostels</option>
                 {hostels.map(h => (
-                  <option key={h.id} value={h.id}>{h.name}</option>
+                  <option key={h.id || h.hostel_id} value={h.id || h.hostel_id}>{h.hostel_name || h.name}</option>
                 ))}
               </select>
             </div>
@@ -194,18 +274,35 @@ export function StaffView({ staff = [], hostels = [], onAddStaff }) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold uppercase text-slate-400 light:text-slate-600 mb-1">
-              Monthly Salary (LKR)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="45000"
-              value={formData.salary}
-              onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
-              className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-teal-500 font-mono"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-400 light:text-slate-600 mb-1">
+                Monthly Salary (LKR)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="45000"
+                value={formData.salary}
+                onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-teal-500 font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-400 light:text-slate-600 mb-1">
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-teal-500"
+              >
+                <option value="Active">Active</option>
+                <option value="On Leave">On Leave</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-dark-border light:border-slate-200">
@@ -220,7 +317,7 @@ export function StaffView({ staff = [], hostels = [], onAddStaff }) {
               type="submit"
               className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold text-sm shadow-md shadow-teal-500/20"
             >
-              Register Staff
+              {editingStaff ? "Update Staff" : "Register Staff"}
             </button>
           </div>
         </form>
@@ -228,3 +325,4 @@ export function StaffView({ staff = [], hostels = [], onAddStaff }) {
     </div>
   );
 }
+

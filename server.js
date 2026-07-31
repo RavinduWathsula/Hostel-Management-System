@@ -859,38 +859,127 @@ app.put('/api/visitors/:id/checkout', async (req, res) => {
 // ==========================================
 // 7. STAFF API
 // ==========================================
-app.get('/api/staff', async (req, res) => {
+const parseStaffHostelId = (val) => {
+  if (val === undefined || val === null || String(val).trim() === '') return null;
+  const parsed = parseInt(val, 10);
+  return isNaN(parsed) ? null : parsed;
+};
+
+const parseStaffSalary = (val) => {
+  if (val === undefined || val === null || String(val).trim() === '') return null;
+  const parsed = parseFloat(val);
+  return isNaN(parsed) ? null : parsed;
+};
+
+const handleGetStaffServer = async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT s.*, s.staff_id as id, h.hostel_name 
+      SELECT s.*, s.designation as role, s.staff_id as id, h.hostel_name 
       FROM staff s
       LEFT JOIN hostel h ON s.hostel_id = h.hostel_id
       ORDER BY s.staff_id DESC
     `);
     res.json({ success: true, data: rows, staff: rows });
   } catch (error) {
+    console.error('Error fetching staff:', error);
     res.status(500).json({ success: false, error: error.message });
   }
-});
+};
+app.get('/api/staff', handleGetStaffServer);
+app.get('/staff', handleGetStaffServer);
 
-app.post('/api/staff', async (req, res) => {
+const handleAddStaffServer = async (req, res) => {
   try {
-    const { full_name, designation, phone, email, hostel_id, salary } = req.body;
-    if (!full_name || !designation || !phone) {
-      return res.status(400).json({ success: false, error: 'Required fields missing' });
+    const { full_name, designation, role, phone, email, hostel_id, salary, status } = req.body;
+    const finalDesignation = designation || role || 'Warden';
+    if (!full_name || !phone) {
+      return res.status(400).json({ success: false, error: 'Full name and phone number are required' });
     }
 
-    await db.query(
-      `INSERT INTO staff (full_name, designation, phone, email, hostel_id, salary)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [full_name, designation, phone, email || null, hostel_id || null, salary || null]
+    try {
+      await db.query("ALTER TABLE staff ADD COLUMN status VARCHAR(20) DEFAULT 'Active'");
+    } catch (e) {}
+
+    const [result] = await db.query(
+      `INSERT INTO staff (full_name, designation, phone, email, hostel_id, salary, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        String(full_name).trim(),
+        String(finalDesignation).trim(),
+        String(phone).trim(),
+        email && String(email).trim() ? String(email).trim() : null,
+        parseStaffHostelId(hostel_id),
+        parseStaffSalary(salary),
+        status || 'Active'
+      ]
     );
 
-    res.status(201).json({ success: true, message: 'Staff added successfully' });
+    res.status(201).json({ success: true, message: 'Staff added successfully', id: result.insertId, staff_id: result.insertId });
   } catch (error) {
+    console.error('Error adding staff:', error);
     res.status(500).json({ success: false, error: error.message });
   }
-});
+};
+app.post('/api/staff', handleAddStaffServer);
+app.post('/staff', handleAddStaffServer);
+
+const handleEditStaffServer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { full_name, designation, role, phone, email, hostel_id, salary, status } = req.body;
+    const finalDesignation = designation || role || 'Warden';
+
+    if (!id) {
+      return res.status(400).json({ success: false, error: 'Staff ID is required' });
+    }
+
+    try {
+      await db.query("ALTER TABLE staff ADD COLUMN status VARCHAR(20) DEFAULT 'Active'");
+    } catch (e) {}
+
+    await db.query(
+      `UPDATE staff 
+       SET full_name = ?, designation = ?, phone = ?, email = ?, hostel_id = ?, salary = ?, status = ?
+       WHERE staff_id = ?`,
+      [
+        full_name ? String(full_name).trim() : '',
+        finalDesignation ? String(finalDesignation).trim() : 'Warden',
+        phone ? String(phone).trim() : '',
+        email && String(email).trim() ? String(email).trim() : null,
+        parseStaffHostelId(hostel_id),
+        parseStaffSalary(salary),
+        status || 'Active',
+        id
+      ]
+    );
+
+    res.json({ success: true, message: 'Staff member updated successfully' });
+  } catch (error) {
+    console.error('Error updating staff:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+app.put('/api/staff/:id', handleEditStaffServer);
+app.put('/staff/:id', handleEditStaffServer);
+
+const handleDeleteStaffServer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ success: false, error: 'Staff ID is required' });
+    }
+    await db.query("UPDATE complaint SET assigned_staff_id = NULL WHERE assigned_staff_id = ?", [id]);
+    await db.query("UPDATE leave_application SET approved_by = NULL WHERE approved_by = ?", [id]);
+    await db.query("UPDATE attendance SET marked_by = NULL WHERE marked_by = ?", [id]);
+    await db.query("DELETE FROM staff WHERE staff_id = ?", [id]);
+    res.json({ success: true, message: 'Staff member deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting staff:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+app.delete('/api/staff/:id', handleDeleteStaffServer);
+app.delete('/staff/:id', handleDeleteStaffServer);
 
 // ==========================================
 // 8. LEAVE APPLICATIONS API

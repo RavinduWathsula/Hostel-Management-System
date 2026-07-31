@@ -300,16 +300,63 @@ export function AppContent() {
     return data;
   };
 
-  // Staff Handler
+  // Staff Handlers
   const handleAddStaff = async (staffData) => {
-    const res = await fetch('/api/staff', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(staffData)
-    });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
+    try {
+      const res = await fetch('/api/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(staffData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to add staff member');
+      }
+      return data;
+    } catch (err) {
+      alert('Error adding staff member: ' + err.message);
+      return { success: false, error: err.message };
+    }
+  };
+
+  const handleEditStaff = async (id, staffData) => {
+    try {
+      const res = await fetch(`/api/staff/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(staffData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to update staff member');
+      }
+      return data;
+    } catch (err) {
+      alert('Error updating staff member: ' + err.message);
+      return { success: false, error: err.message };
+    }
+  };
+
+  const handleDeleteStaff = async (id) => {
+    if (!window.confirm('Are you sure you want to remove this staff member?')) return;
+    try {
+      const res = await fetch(`/api/staff/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setStaff(prev => prev.filter(s => String(s.id || s.staff_id) !== String(id)));
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to delete staff member');
+      }
+      return data;
+    } catch (err) {
+      alert('Error deleting staff member: ' + err.message);
+      return { success: false, error: err.message };
+    }
   };
 
   // Leave Handlers
@@ -509,7 +556,13 @@ export function AppContent() {
           )}
 
           {currentView === 'staff' && (
-            <StaffView hostels={hostels} staff={staff} onAddStaff={handleAddStaff} />
+            <StaffView
+              hostels={hostels}
+              staff={staff}
+              onAddStaff={handleAddStaff}
+              onEditStaff={handleEditStaff}
+              onDeleteStaff={handleDeleteStaff}
+            />
           )}
 
           {currentView === 'leaves' && (
