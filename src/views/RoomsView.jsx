@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Building2, Plus, BedDouble, Users, Home, DollarSign, Eye, CheckCircle2, Phone, Sparkles, User, Info, Heart, Trash2, ArrowLeftRight, LogOut, Pencil } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
+import { StudentSearchSelect } from '../components/common/StudentSearchSelect';
 
 export function RoomsView({ hostels = [], rooms = [], students = [], allocations = [], onAddRoom, onEditRoom, onAddHostel, onDeleteRoom, onVacateRoom, onChangeBed, onAllocateRoom, onNavigateToAllocation, searchTerm = '' }) {
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -881,23 +882,13 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
               <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
                 Select Resident Student <span className="text-rose-500">*</span>
               </label>
-              <select
-                required
+              <StudentSearchSelect
+                students={students}
                 value={quickAllocateModal.student_id}
-                onChange={(e) => setQuickAllocateModal({ ...quickAllocateModal, student_id: e.target.value })}
-                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="">-- Choose Student --</option>
-                {students.map(st => {
-                  const sId = st.student_id || st.id;
-                  const isSuspended = st.status === 'Suspended';
-                  return (
-                    <option key={sId} value={sId} disabled={isSuspended}>
-                      {st.full_name || st.name} ({st.admission_no || sId}) {isSuspended ? '⚠️ [SUSPENDED]' : ''}
-                    </option>
-                  );
-                })}
-              </select>
+                onChange={(val) => setQuickAllocateModal({ ...quickAllocateModal, student_id: val })}
+                required
+                placeholder="-- Type Student Name or Choose Student --"
+              />
             </div>
 
             <div>

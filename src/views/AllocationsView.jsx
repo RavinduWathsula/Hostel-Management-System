@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KeyRound, Plus, Building2, User, Calendar, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
+import { StudentSearchSelect } from '../components/common/StudentSearchSelect';
 
 export function AllocationsView({ allocations = [], students = [], hostels = [], rooms = [], onAllocateRoom, searchTerm = '' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -197,24 +198,13 @@ export function AllocationsView({ allocations = [], students = [], hostels = [],
             <label className="block text-xs font-bold uppercase text-slate-400 light:text-slate-600 mb-1">
               Select Student <span className="text-rose-500">*</span>
             </label>
-            <select
-              required
+            <StudentSearchSelect
+              students={students}
               value={formData.student_id}
-              onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-              className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-emerald-500"
-            >
-              <option value="">-- Choose Student --</option>
-              {students.length === 0 && <option value="" disabled>No students available</option>}
-              {students.map(st => {
-                const sId = getStudentId(st);
-                const isSuspended = st.status === 'Suspended';
-                return (
-                  <option key={sId} value={sId} disabled={isSuspended}>
-                    {getStudentName(st)} ({st.admission_no || sId}) {isSuspended ? '⚠️ [SUSPENDED]' : ''}
-                  </option>
-                );
-              })}
-            </select>
+              onChange={(val) => setFormData({ ...formData, student_id: val })}
+              required
+              placeholder="-- Type Student Name or Choose Student --"
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

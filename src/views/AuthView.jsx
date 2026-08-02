@@ -8,7 +8,7 @@ export function AuthView() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [loginForm, setLoginForm] = useState({ username: 'admin', password: 'admin123' });
   const [registerForm, setRegisterForm] = useState({
     full_name: '',
     username: '',

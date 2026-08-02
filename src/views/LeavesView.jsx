@@ -5,6 +5,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
+import { StudentSearchSelect } from '../components/common/StudentSearchSelect';
 
 export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdateLeaveStatus, searchTerm = '' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -412,22 +413,13 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
             <label className="block text-xs font-semibold text-slate-300 light:text-slate-700 mb-1.5">
               Resident Student <span className="text-rose-500">*</span>
             </label>
-            <select
-              required
+            <StudentSearchSelect
+              students={students}
               value={formData.student_id}
-              onChange={(e) => handleStudentChange(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-xs text-slate-100 light:text-slate-900 focus:outline-none focus:border-blue-500 transition-colors"
-            >
-              <option value="">-- Select Resident Student --</option>
-              {students.map(st => {
-                const sId = st.id || st.student_id;
-                return (
-                  <option key={sId} value={sId}>
-                    {st.full_name} ({st.admission_no || `ID: ${sId}`})
-                  </option>
-                );
-              })}
-            </select>
+              onChange={(val) => handleStudentChange(val)}
+              required
+              placeholder="-- Type Student Name or Select Resident --"
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

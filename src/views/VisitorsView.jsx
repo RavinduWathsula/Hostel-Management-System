@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlus, Plus, Clock, LogOut, Phone, ShieldCheck } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
+import { StudentSearchSelect } from '../components/common/StudentSearchSelect';
 
 export function VisitorsView({ visitors = [], students = [], onLogVisitor, onCheckoutVisitor, searchTerm = '' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -201,16 +202,12 @@ export function VisitorsView({ visitors = [], students = [], onLogVisitor, onChe
               <label className="block text-xs font-bold uppercase text-slate-400 light:text-slate-600 mb-1">
                 Resident Student Visiting
               </label>
-              <select
+              <StudentSearchSelect
+                students={students}
                 value={formData.student_id}
-                onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-amber-500"
-              >
-                <option value="">-- Choose Resident --</option>
-                {students.map(st => (
-                  <option key={st.id} value={st.id}>{st.full_name} ({st.admission_no})</option>
-                ))}
-              </select>
+                onChange={(val) => setFormData({ ...formData, student_id: val })}
+                placeholder="-- Type Student Name or Choose Resident --"
+              />
             </div>
 
             <div>
