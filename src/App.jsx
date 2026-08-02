@@ -562,8 +562,17 @@ export function AppContent() {
 
   const handleCheckoutVisitor = async (id) => {
     try {
-      const res = await fetch(`/api/visitors/${id}/checkout`, { method: 'PUT' });
-      const data = await res.json();
+      const token = localStorage.getItem('aegis_token');
+      const res = await fetch(`/api/visitors/${id}/checkout`, { 
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ id })
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
       if (data.success) {
         await fetchAllData();
       } else {

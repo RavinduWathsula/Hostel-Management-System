@@ -17,6 +17,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Database Connection Middleware helper
 const checkDbConnection = async (req, res, next) => {
+  // Allow auth and login routes to bypass database blocking check
+  if (req.path && (req.path.startsWith('/auth') || req.path === '/login' || req.path === '/register')) {
+    return next();
+  }
   try {
     const connection = await db.getConnection();
     connection.release();
@@ -875,11 +879,35 @@ const handlePostVisitorServer = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Visitor name and phone number are required' });
     }
 
+    // Auto-create table visitor_log if not existing
     try {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS visitor_log (
+          visitor_id INT AUTO_INCREMENT PRIMARY KEY,
+          student_id INT NULL,
+          visitor_name VARCHAR(100) NOT NULL,
+          relation VARCHAR(50),
+          phone VARCHAR(20) NOT NULL,
+          visit_date DATE DEFAULT (CURRENT_DATE),
+          time_in TIME DEFAULT (CURRENT_TIME),
+          time_out TIME DEFAULT NULL,
+          purpose TEXT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
       await db.query("ALTER TABLE visitor_log MODIFY COLUMN student_id INT NULL");
     } catch (e) {}
 
-    let studentIdVal = student_id && String(student_id).trim() !== '' ? parseInt(student_id, 10) : null;
+    let studentIdVal = null;
+    if (student_id) {
+      const [stCheck] = await db.query(
+        "SELECT student_id FROM student WHERE student_id = ? OR admission_no = ? LIMIT 1",
+        [student_id, student_id]
+      );
+      if (stCheck.length > 0) {
+        studentIdVal = stCheck[0].student_id;
+      }
+    }
+
     if (!studentIdVal) {
       const [firstSt] = await db.query("SELECT student_id FROM student LIMIT 1");
       if (firstSt.length > 0) studentIdVal = firstSt[0].student_id;
@@ -891,10 +919,10 @@ const handlePostVisitorServer = async (req, res) => {
       [studentIdVal, String(visitor_name).trim(), relation ? String(relation).trim() : null, String(phone).trim(), purpose ? String(purpose).trim() : null]
     );
 
-    res.status(201).json({ success: true, message: 'Visitor checked in successfully', id: result.insertId });
+    return res.status(201).json({ success: true, message: 'Visitor checked in successfully', id: result.insertId });
   } catch (error) {
     console.error('Error logging visitor entry:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: error.message || 'Failed to log visitor entry' });
   }
 };
 app.post('/api/visitors', handlePostVisitorServer);
@@ -902,22 +930,27 @@ app.post('/visitors', handlePostVisitorServer);
 
 const handleCheckoutVisitorServer = async (req, res) => {
   try {
-    const { id } = req.params;
-    if (!id) {
+    const visitorId = req.params.id || req.body.id || req.body.visitor_id || req.body.visitorId;
+    if (!visitorId) {
       return res.status(400).json({ success: false, error: 'Visitor ID is required' });
     }
+
     await db.query(
-      "UPDATE visitor_log SET time_out = CURRENT_TIME WHERE visitor_id = ?",
-      [id]
+      "UPDATE visitor_log SET time_out = CURRENT_TIME WHERE visitor_id = ? OR visitor_id = ?",
+      [visitorId, parseInt(visitorId, 10)]
     );
-    res.json({ success: true, message: 'Visitor checked out successfully' });
+
+    return res.json({ success: true, message: 'Visitor checked out successfully' });
   } catch (error) {
     console.error('Error checking out visitor:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: error.message || 'Failed to check out visitor' });
   }
 };
 app.put('/api/visitors/:id/checkout', handleCheckoutVisitorServer);
 app.put('/visitors/:id/checkout', handleCheckoutVisitorServer);
+app.post('/api/visitors/:id/checkout', handleCheckoutVisitorServer);
+app.post('/visitors/:id/checkout', handleCheckoutVisitorServer);
+app.post('/api/visitors/checkout', handleCheckoutVisitorServer);
 
 // ==========================================
 // 7. STAFF API
