@@ -1310,17 +1310,28 @@ const handlePostAttendance = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Records array is required' });
     }
 
+    try {
+      await db.query("ALTER TABLE attendance MODIFY COLUMN status VARCHAR(50) DEFAULT 'Present'");
+    } catch (e) {}
+
     for (const rec of records) {
+      const studentId = parseInt(rec.student_id, 10);
+      if (!studentId || isNaN(studentId)) continue;
+      
+      let statusVal = rec.status || 'Present';
+      if (statusVal === 'Leave') statusVal = 'On Leave';
+
       await db.query(`
         INSERT INTO attendance (student_id, attendance_date, status, marked_by)
         VALUES (?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE status = VALUES(status), marked_by = VALUES(marked_by)
-      `, [rec.student_id, targetDate, rec.status, marked_by || null]);
+      `, [studentId, targetDate, statusVal, marked_by || null]);
     }
 
-    res.json({ success: true, message: 'Attendance marked successfully' });
+    return res.json({ success: true, message: 'Attendance marked successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error posting attendance:', error);
+    return res.status(500).json({ success: false, error: error.message || 'Failed to post attendance' });
   }
 };
 

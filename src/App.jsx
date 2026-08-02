@@ -587,14 +587,29 @@ export function AppContent() {
 
   // Attendance Handlers
   const handleSaveAttendance = async (date, records) => {
-    const res = await fetch('/api/attendance/daily', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, records })
-    });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
+    try {
+      const token = localStorage.getItem('aegis_token');
+      const res = await fetch('/api/attendance/daily', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ date, records })
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
+      if (data.success) {
+        alert('Daily rollcall saved successfully!');
+        fetchAllData();
+      } else {
+        alert(data.error || 'Failed to save attendance rollcall');
+      }
+      return data;
+    } catch (err) {
+      alert('Error saving rollcall: ' + err.message);
+      return { success: false, error: err.message };
+    }
   };
 
   const handleLoadStudentChart = async (studentId, days) => {
