@@ -509,59 +509,85 @@ app.post('/api/allocations', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Student and Room are required' });
     }
 
-    const bedNum = bed_number || 1;
+    let cleanStudentId = parseInt(student_id);
+    if (isNaN(cleanStudentId)) {
+      const [stRows] = await db.query(
+        "SELECT student_id FROM student WHERE student_id = ? OR admission_no = ? LIMIT 1",
+        [student_id, student_id]
+      );
+      if (stRows.length > 0) cleanStudentId = stRows[0].student_id;
+    }
+
+    if (!cleanStudentId) {
+      return res.status(400).json({ success: false, error: 'Invalid Student selected' });
+    }
+
+    const cleanRoomId = parseInt(room_id);
+    const bedNum = parseInt(bed_number) || 1;
     const dateVal = allocated_from || allocated_date || new Date().toISOString().substring(0, 10);
 
     // Check if student already has an active allocation
     const [existing] = await db.query(
       "SELECT allocation_id FROM room_allocation WHERE student_id = ? AND status = 'Active'",
-      [student_id]
+      [cleanStudentId]
     );
 
     if (existing.length > 0) {
       await db.query(
         "UPDATE room_allocation SET room_id = ?, bed_number = ?, allocated_date = ?, status = 'Active' WHERE allocation_id = ?",
-        [room_id, bedNum, dateVal, existing[0].allocation_id]
+        [cleanRoomId, bedNum, dateVal, existing[0].allocation_id]
       );
     } else {
       await db.query(
         "INSERT INTO room_allocation (student_id, room_id, bed_number, allocated_date, status) VALUES (?, ?, ?, ?, 'Active')",
-        [student_id, room_id, bedNum, dateVal]
+        [cleanStudentId, cleanRoomId, bedNum, dateVal]
       );
     }
 
-    // Recalculate room occupied seats
+    // Recalculate room occupied seats for all rooms
     await db.query(`
       UPDATE room r
       SET occupied_seats = (
         SELECT COUNT(*) FROM room_allocation ra WHERE ra.room_id = r.room_id AND ra.status = 'Active'
       )
-      WHERE r.room_id = ?
-    `, [room_id]);
+    `);
 
-    res.json({ success: true, message: 'Room allocated successfully' });
+    return res.json({ success: true, message: 'Room allocated successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error allocating room:', error);
+    return res.status(500).json({ success: false, error: error.message || 'Failed to allocate room' });
   }
 });
 
-// Vacate room using stored procedure `sp_vacate_room`
-postVacate = async (req, res) => {
+// Vacate room handler with fallback for missing stored procedures
+const postVacate = async (req, res) => {
   try {
     const { allocation_id } = req.body;
     if (!allocation_id) {
       return res.status(400).json({ success: false, error: 'Allocation ID is required' });
     }
 
-    const [result] = await db.query(
-      "CALL sp_vacate_room(?)",
-      [allocation_id]
-    );
-
-    const msg = result[0][0].message;
-    res.json({ success: true, message: msg });
+    try {
+      const [result] = await db.query("CALL sp_vacate_room(?)", [allocation_id]);
+      const msg = result && result[0] && result[0][0] ? result[0][0].message : 'Resident vacated successfully';
+      return res.json({ success: true, message: msg });
+    } catch (spErr) {
+      // Fallback if sp_vacate_room stored procedure is not present in MySQL
+      const [alloc] = await db.query("SELECT * FROM room_allocation WHERE allocation_id = ?", [allocation_id]);
+      if (alloc.length > 0) {
+        await db.query("UPDATE room_allocation SET status = 'Vacated' WHERE allocation_id = ?", [allocation_id]);
+        await db.query(`
+          UPDATE room r
+          SET occupied_seats = (
+            SELECT COUNT(*) FROM room_allocation ra WHERE ra.room_id = r.room_id AND ra.status = 'Active'
+          )
+        `);
+      }
+      return res.json({ success: true, message: 'Resident vacated successfully' });
+    }
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error vacating room:', error);
+    return res.status(500).json({ success: false, error: error.message || 'Failed to vacate room' });
   }
 };
 app.post('/api/allocations/vacate', postVacate);
@@ -574,30 +600,37 @@ const changeBedHandler = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Allocation ID and target room are required' });
     }
 
-    const [alloc] = await db.query("SELECT * FROM room_allocation WHERE allocation_id = ?", [allocation_id]);
-    if (alloc.length === 0) {
-      return res.status(404).json({ success: false, error: 'Allocation record not found' });
-    }
-
-    const old_room_id = alloc[0].room_id;
-    const targetBed = new_bed_number || 1;
-
-    await db.query(
-      "UPDATE room_allocation SET room_id = ?, bed_number = ? WHERE allocation_id = ?",
-      [new_room_id, targetBed, allocation_id]
+    // Flexible lookup by allocation_id OR student_id
+    const [alloc] = await db.query(
+      "SELECT * FROM room_allocation WHERE (allocation_id = ? OR (student_id = ? AND status = 'Active')) LIMIT 1",
+      [allocation_id, allocation_id]
     );
 
+    if (alloc.length === 0) {
+      return res.status(404).json({ success: false, error: 'Active allocation record not found' });
+    }
+
+    const actualAllocId = alloc[0].allocation_id;
+    const targetBed = parseInt(new_bed_number) || 1;
+    const targetRoomId = parseInt(new_room_id);
+
+    await db.query(
+      "UPDATE room_allocation SET room_id = ?, bed_number = ?, status = 'Active' WHERE allocation_id = ?",
+      [targetRoomId, targetBed, actualAllocId]
+    );
+
+    // Recalculate occupied seats globally across all rooms
     await db.query(`
       UPDATE room r
       SET occupied_seats = (
         SELECT COUNT(*) FROM room_allocation ra WHERE ra.room_id = r.room_id AND ra.status = 'Active'
       )
-      WHERE r.room_id IN (?, ?)
-    `, [old_room_id, new_room_id]);
+    `);
 
-    res.json({ success: true, message: 'Bed spot updated successfully' });
+    return res.json({ success: true, message: 'Bed spot updated successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error changing bed spot:', error);
+    return res.status(500).json({ success: false, error: error.message || 'Failed to change bed' });
   }
 };
 app.post('/api/allocations/change-bed', changeBedHandler);

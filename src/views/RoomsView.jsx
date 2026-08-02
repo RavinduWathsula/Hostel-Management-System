@@ -599,85 +599,120 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
       </Modal>
 
       {/* CHANGE BED MODAL */}
-      {changeBedModal && (
-        <Modal
-          isOpen={Boolean(changeBedModal)}
-          onClose={() => setChangeBedModal(null)}
-          title={`Change Bed Spot - ${changeBedModal.student_name}`}
-          subtitle={`Currently in Room ${changeBedModal.current_room} • Bed ${changeBedModal.current_bed}`}
-          icon={ArrowLeftRight}
-          themeClass="from-purple-600 to-indigo-600"
-        >
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!changeBedModal.new_room_id) return;
-              if (onChangeBed) {
-                await onChangeBed(
-                  changeBedModal.allocation_id,
-                  Number(changeBedModal.new_room_id),
-                  Number(changeBedModal.new_bed_number || 1)
-                );
-              }
-              setChangeBedModal(null);
-            }}
-            className="space-y-4 font-body"
+      {changeBedModal && (() => {
+        const selectedTargetRoom = rooms.find(r => String(getRoomId(r)) === String(changeBedModal.new_room_id)) || rooms[0];
+        const targetCapacity = selectedTargetRoom ? getRoomCapacity(selectedTargetRoom) : 2;
+        const occupiedBedsInTargetRoom = allocations
+          .filter(a => String(a.room_id) === String(changeBedModal.new_room_id) && a.status === 'Active')
+          .map(a => Number(a.bed_number));
+
+        return (
+          <Modal
+            isOpen={Boolean(changeBedModal)}
+            onClose={() => setChangeBedModal(null)}
+            title={`Change Bed Spot - ${changeBedModal.student_name}`}
+            subtitle={`Currently in Room ${changeBedModal.current_room} • Bed ${changeBedModal.current_bed}`}
+            icon={ArrowLeftRight}
+            themeClass="from-purple-600 to-indigo-600"
           >
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
-                Select Target Room <span className="text-rose-500">*</span>
-              </label>
-              <select
-                required
-                value={changeBedModal.new_room_id}
-                onChange={(e) => setChangeBedModal({ ...changeBedModal, new_room_id: e.target.value })}
-                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-purple-500"
-              >
-                {rooms.map(r => {
-                  const rId = getRoomId(r);
-                  const free = getRoomCapacity(r) - getRoomOccupied(r);
-                  return (
-                    <option key={rId} value={rId}>
-                      Room {r.room_number} ({r.hostel_name || 'Hostel'}) - {free > 0 ? `${free} beds free` : 'Full'}
-                    </option>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!changeBedModal.new_room_id) return;
+                if (onChangeBed) {
+                  await onChangeBed(
+                    changeBedModal.allocation_id,
+                    Number(changeBedModal.new_room_id),
+                    Number(changeBedModal.new_bed_number || 1)
                   );
-                })}
-              </select>
-            </div>
+                }
+                setChangeBedModal(null);
+              }}
+              className="space-y-4 font-body"
+            >
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  Select Target Room <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  required
+                  value={changeBedModal.new_room_id}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const targetRoom = rooms.find(r => String(getRoomId(r)) === String(selectedId));
+                    const cap = targetRoom ? getRoomCapacity(targetRoom) : 2;
+                    const targetOccupiedBeds = allocations
+                      .filter(a => String(a.room_id) === String(selectedId) && a.status === 'Active')
+                      .map(a => Number(a.bed_number));
+                    
+                    let firstFree = 1;
+                    for (let b = 1; b <= cap; b++) {
+                      if (!targetOccupiedBeds.includes(b)) {
+                        firstFree = b;
+                        break;
+                      }
+                    }
+                    setChangeBedModal(prev => ({
+                      ...prev,
+                      new_room_id: selectedId,
+                      new_bed_number: firstFree
+                    }));
+                  }}
+                  className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-purple-500"
+                >
+                  {rooms.map(r => {
+                    const rId = getRoomId(r);
+                    const free = getRoomCapacity(r) - getRoomOccupied(r);
+                    return (
+                      <option key={rId} value={rId}>
+                        Room {r.room_number} ({r.hostel_name || 'Hostel'}) - {getRoomCapacity(r)} beds total ({free > 0 ? `${free} free` : 'Full'})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
-                Select Bed Spot Number
-              </label>
-              <select
-                value={changeBedModal.new_bed_number}
-                onChange={(e) => setChangeBedModal({ ...changeBedModal, new_bed_number: e.target.value })}
-                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-purple-500 font-mono"
-              >
-                {[1, 2, 3, 4].map(b => (
-                  <option key={b} value={b}>Bed Spot {b}</option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  Select Bed Spot Number ({targetCapacity} Beds Total in Room {selectedTargetRoom?.room_number || ''})
+                </label>
+                <select
+                  value={changeBedModal.new_bed_number}
+                  onChange={(e) => setChangeBedModal({ ...changeBedModal, new_bed_number: Number(e.target.value) })}
+                  className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-purple-500 font-mono"
+                >
+                  {Array.from({ length: targetCapacity }, (_, i) => i + 1).map(b => {
+                    const isOccupied = occupiedBedsInTargetRoom.includes(b);
+                    const occupyingAlloc = allocations.find(a => String(a.room_id) === String(changeBedModal.new_room_id) && Number(a.bed_number) === b && a.status === 'Active');
+                    const occupantName = occupyingAlloc ? (occupyingAlloc.student_name || 'Occupied') : null;
+                    return (
+                      <option key={b} value={b} disabled={isOccupied}>
+                        Bed Spot {b} {isOccupied ? `(Occupied by ${occupantName})` : '(Available)'}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-dark-border light:border-slate-200">
-              <button
-                type="button"
-                onClick={() => setChangeBedModal(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-purple-500/25 transition-all"
-              >
-                Confirm Bed Transfer
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-dark-border light:border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setChangeBedModal(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-purple-500/25 transition-all"
+                >
+                  Confirm Bed Transfer
+                </button>
+              </div>
+            </form>
+          </Modal>
+        );
+      })()}
 
       {/* EDIT ROOM MODAL */}
       {editRoomModal && (

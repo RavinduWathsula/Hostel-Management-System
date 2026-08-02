@@ -269,16 +269,29 @@ export function AllocationsView({ allocations = [], students = [], hostels = [],
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase text-slate-400 light:text-slate-600 mb-1">
-                Bed Spot Number
+                Select Bed Spot Number
               </label>
-              <input
-                type="number"
-                min="1"
-                max="10"
+              <select
                 value={formData.bed_number}
                 onChange={(e) => setFormData({ ...formData, bed_number: Number(e.target.value) })}
-                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-emerald-500"
-              />
+                className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
+              >
+                {(() => {
+                  const selRoom = rooms.find(r => String(getRoomId(r)) === String(formData.room_id));
+                  const cap = selRoom ? Number(selRoom.capacity || 2) : 2;
+                  const occBeds = allocations
+                    .filter(a => String(a.room_id) === String(formData.room_id) && a.status === 'Active')
+                    .map(a => Number(a.bed_number));
+                  return Array.from({ length: cap }, (_, i) => i + 1).map(b => {
+                    const isOcc = occBeds.includes(b);
+                    return (
+                      <option key={b} value={b} disabled={isOcc}>
+                        Bed Spot {b} {isOcc ? '(Occupied)' : '(Available)'}
+                      </option>
+                    );
+                  });
+                })()}
+              </select>
             </div>
 
             <div>

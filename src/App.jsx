@@ -135,79 +135,181 @@ export function AppContent() {
     return data;
   };
 
-  // Allocation Handler
+  // Room & Allocation Handlers
+  const handleAddRoom = async (roomData) => {
+    try {
+      const token = localStorage.getItem('aegis_token');
+      const res = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(roomData)
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to add room');
+      }
+      return data;
+    } catch (err) {
+      alert('Error adding room: ' + err.message);
+      return { success: false, error: err.message };
+    }
+  };
+
+  const handleAddHostel = async (hostelData) => {
+    try {
+      const token = localStorage.getItem('aegis_token');
+      const res = await fetch('/api/hostels', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(hostelData)
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to add hostel');
+      }
+      return data;
+    } catch (err) {
+      alert('Error adding hostel: ' + err.message);
+      return { success: false, error: err.message };
+    }
+  };
+
   const handleAllocateRoom = async (allocationData) => {
-    const res = await fetch('/api/allocations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(allocationData)
-    });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
+    try {
+      const token = localStorage.getItem('aegis_token');
+      const res = await fetch('/api/allocations', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(allocationData)
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to allocate room bed');
+      }
+      return data;
+    } catch (err) {
+      alert('Error allocating room: ' + err.message);
+      return { success: false, error: err.message };
+    }
   };
 
   const handleDeleteRoom = async (roomId) => {
     if (!window.confirm('Are you sure you want to delete this room?')) return;
     try {
-      const res = await fetch(`/api/rooms/${roomId}`, { method: 'DELETE' });
-      const data = await res.json();
+      const token = localStorage.getItem('aegis_token');
+      const res = await fetch(`/api/rooms/${roomId}`, { 
+        method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
       if (data.success) {
         setRooms(prev => prev.filter(r => String(r.room_id || r.id) !== String(roomId)));
-        fetchAllData();
+        await fetchAllData();
       } else {
         alert(data.error || 'Failed to delete room');
       }
       return data;
     } catch (err) {
       alert('Error deleting room: ' + err.message);
+      return { success: false, error: err.message };
     }
   };
 
   const handleEditRoom = async (roomId, roomData) => {
-    const res = await fetch(`/api/rooms/${roomId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(roomData)
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchAllData();
-    } else {
-      alert(data.error || 'Failed to update room');
+    try {
+      const token = localStorage.getItem('aegis_token');
+      const res = await fetch(`/api/rooms/${roomId}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(roomData)
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to update room');
+      }
+      return data;
+    } catch (err) {
+      alert('Error updating room: ' + err.message);
+      return { success: false, error: err.message };
     }
-    return data;
   };
 
   const handleVacateRoom = async (allocationId) => {
     if (!window.confirm('Are you sure you want to vacate this resident from the room bed?')) return;
-    const res = await fetch('/api/allocations/vacate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ allocation_id: allocationId })
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchAllData();
-    } else {
-      alert(data.error || 'Failed to vacate room bed');
+    try {
+      const token = localStorage.getItem('aegis_token');
+      const res = await fetch('/api/allocations/vacate', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ allocation_id: allocationId })
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to vacate room bed');
+      }
+      return data;
+    } catch (err) {
+      alert('Error vacating room bed: ' + err.message);
+      return { success: false, error: err.message };
     }
-    return data;
   };
 
   const handleChangeBed = async (allocationId, newRoomId, newBedNumber) => {
-    const res = await fetch('/api/allocations/change-bed', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ allocation_id: allocationId, new_room_id: newRoomId, new_bed_number: newBedNumber })
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchAllData();
-    } else {
-      alert(data.error || 'Failed to change bed');
+    try {
+      const token = localStorage.getItem('aegis_token');
+      const res = await fetch('/api/allocations/change-bed', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ allocation_id: allocationId, new_room_id: newRoomId, new_bed_number: newBedNumber })
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to change bed');
+      }
+      return data;
+    } catch (err) {
+      alert('Error changing bed: ' + err.message);
+      return { success: false, error: err.message };
     }
-    return data;
   };
 
   // Fee Payment Handler
@@ -505,29 +607,6 @@ export function AppContent() {
 
   const pendingComplaintsCount = complaints.filter(c => c.status !== 'Resolved').length;
   const pendingLeavesCount = leaves.filter(l => l.status === 'Pending').length;
-
-  // Room & Hostel Handlers
-  const handleAddRoom = async (roomData) => {
-    const res = await fetch('/api/rooms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(roomData)
-    });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
-  };
-
-  const handleAddHostel = async (hostelData) => {
-    const res = await fetch('/api/hostels', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(hostelData)
-    });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
-  };
 
   return (
     <div className="flex min-h-screen bg-dark-bg light:bg-slate-50 transition-colors">
