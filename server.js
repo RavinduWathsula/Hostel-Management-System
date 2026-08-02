@@ -1017,6 +1017,24 @@ app.delete('/staff/:id', handleDeleteStaffServer);
 // ==========================================
 app.get('/api/leaves', async (req, res) => {
   try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS leave_application (
+        leave_id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        from_date DATE NOT NULL,
+        to_date DATE NOT NULL,
+        reason TEXT,
+        emergency_contact VARCHAR(50),
+        status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+        approved_by INT,
+        applied_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    try {
+      await db.query("ALTER TABLE leave_application ADD COLUMN emergency_contact VARCHAR(50)");
+    } catch (e) {}
+
     const [rows] = await db.query(`
       SELECT l.*, l.leave_id as id, s.full_name as student_name, s.admission_no, st.full_name as approved_by_name
       FROM leave_application l
@@ -1026,6 +1044,7 @@ app.get('/api/leaves', async (req, res) => {
     `);
     res.json({ success: true, data: rows, leaves: rows });
   } catch (error) {
+    console.error('Error fetching leaves:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1034,22 +1053,64 @@ const handlePostLeaveServer = async (req, res) => {
   try {
     const { student_id, from_date, to_date, reason, emergency_contact } = req.body;
     if (!student_id || !from_date || !to_date) {
-      return res.status(400).json({ success: false, error: 'Required fields missing' });
+      return res.status(400).json({ success: false, error: 'Student, From Date, and To Date are required fields' });
     }
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS leave_application (
+        leave_id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        from_date DATE NOT NULL,
+        to_date DATE NOT NULL,
+        reason TEXT,
+        emergency_contact VARCHAR(50),
+        status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+        approved_by INT,
+        applied_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
 
     try {
       await db.query("ALTER TABLE leave_application ADD COLUMN emergency_contact VARCHAR(50)");
     } catch (e) {}
 
-    await db.query(
-      `INSERT INTO leave_application (student_id, from_date, to_date, reason, emergency_contact)
-       VALUES (?, ?, ?, ?, ?)`,
-      [student_id, from_date, to_date, reason || null, emergency_contact || null]
+    // Flexible student lookup by student_id, id, or admission_no
+    let actualStudentId = null;
+    try {
+      const [stRows] = await db.query(
+        "SELECT student_id FROM student WHERE student_id = ? OR admission_no = ? LIMIT 1",
+        [student_id, student_id]
+      );
+      if (stRows.length > 0) {
+        actualStudentId = stRows[0].student_id;
+      }
+    } catch (err) {}
+
+    if (!actualStudentId) {
+      const numericId = parseInt(student_id);
+      if (!isNaN(numericId)) actualStudentId = numericId;
+    }
+
+    if (!actualStudentId) {
+      return res.status(400).json({ success: false, error: 'Selected student not found in database. Please re-select a resident student.' });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO leave_application (student_id, from_date, to_date, reason, emergency_contact, status)
+       VALUES (?, ?, ?, ?, ?, 'Pending')`,
+      [actualStudentId, from_date, to_date, reason || null, emergency_contact || null]
     );
 
-    res.status(201).json({ success: true, message: 'Leave application submitted' });
+    return res.status(201).json({
+      success: true,
+      message: 'Leave application submitted successfully',
+      insertId: result.insertId,
+      leave_id: result.insertId,
+      id: result.insertId
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error submitting leave application:', error);
+    return res.status(500).json({ success: false, error: error.message || 'Failed to submit leave application' });
   }
 };
 app.post('/api/leaves', handlePostLeaveServer);

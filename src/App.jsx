@@ -362,13 +362,43 @@ export function AppContent() {
   // Leave Handlers
   const handleRequestLeave = async (leaveData) => {
     try {
+      const token = localStorage.getItem('aegis_token');
       const res = await fetch('/api/leaves', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify(leaveData)
       });
-      const data = await res.json();
+
+      const text = await res.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : { success: false, error: 'Server returned empty response' };
+      } catch (parseErr) {
+        console.error('Non-JSON server response text:', text);
+        data = { success: false, error: 'Server error: ' + (text.substring(0, 100) || 'Invalid response format') };
+      }
+
       if (data.success) {
+        const studentObj = students.find(s => 
+          String(s.id || s.student_id) === String(leaveData.student_id) ||
+          String(s.admission_no) === String(leaveData.student_id)
+        );
+        const newLeave = {
+          id: data.insertId || data.leave_id || Date.now(),
+          leave_id: data.insertId || data.leave_id || Date.now(),
+          student_id: leaveData.student_id,
+          student_name: studentObj ? (studentObj.full_name || studentObj.name) : 'Student',
+          admission_no: studentObj ? studentObj.admission_no : '',
+          from_date: leaveData.from_date,
+          to_date: leaveData.to_date,
+          reason: leaveData.reason,
+          emergency_contact: leaveData.emergency_contact || 'N/A',
+          status: 'Pending'
+        };
+        setLeaves(prev => [newLeave, ...prev]);
         await fetchAllData();
       } else {
         alert(data.error || 'Failed to submit leave request');
@@ -383,12 +413,17 @@ export function AppContent() {
   const handleUpdateLeaveStatus = async (id, status) => {
     try {
       setLeaves(prev => prev.map(l => (String(l.id || l.leave_id) === String(id) ? { ...l, status } : l)));
+      const token = localStorage.getItem('aegis_token');
       const res = await fetch(`/api/leaves/${id}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ status })
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
       if (data.success) {
         await fetchAllData();
       } else {
