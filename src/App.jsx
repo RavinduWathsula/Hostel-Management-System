@@ -16,7 +16,14 @@ import { AttendanceView } from './views/AttendanceView';
 
 export function AppContent() {
   const { admin, loading: authLoading } = useAuth();
-  const [currentView, setCurrentView] = useState('dashboard');
+  const [currentView, setCurrentViewState] = useState(() => {
+    return localStorage.getItem('aegis_current_view') || 'dashboard';
+  });
+
+  const setCurrentView = (view) => {
+    setCurrentViewState(view);
+    localStorage.setItem('aegis_current_view', view);
+  };
   const [mobileOpen, setMobileOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const [dbOnline, setDbOnline] = useState(true);

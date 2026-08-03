@@ -64,20 +64,20 @@ export function DashboardView({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             <button
               onClick={() => onQuickAction('allocate-room')}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:from-pink-400 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-purple-500/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 h-11 rounded-xl bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:from-pink-400 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-purple-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             >
-              <KeyRound className="w-4 h-4" />
+              <KeyRound className="w-4 h-4 shrink-0" />
               <span>Quick Assign Bed</span>
             </button>
 
             <button
               onClick={() => onQuickAction('add-student')}
-              className="px-5 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 font-bold text-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 h-11 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             >
-              <UserPlus className="w-4 h-4 text-pink-400" />
+              <UserPlus className="w-4 h-4 shrink-0 text-pink-400" />
               <span>+ New Resident</span>
             </button>
           </div>

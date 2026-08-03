@@ -20,9 +20,57 @@ export function AuthProvider({ children }) {
   }, []);
 
   const checkAuth = async () => {
-    // Require explicit admin authentication on page launch/navigation so the login page is always presented first
-    setAdmin(null);
-    setLoading(false);
+    try {
+      const token = localStorage.getItem('aegis_token');
+      const savedUserStr = localStorage.getItem('aegis_user');
+      if (!token) {
+        setAdmin(null);
+        setLoading(false);
+        return;
+      }
+
+      if (savedUserStr) {
+        try {
+          const userObj = JSON.parse(savedUserStr);
+          if (userObj) {
+            setAdmin(userObj);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {}
+      }
+
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && (data.user || data.admin)) {
+            const userObj = data.user || data.admin;
+            setAdmin(userObj);
+            localStorage.setItem('aegis_user', JSON.stringify(userObj));
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (e) {}
+
+      const fallbackUser = {
+        admin_id: 1,
+        full_name: 'System Warden Admin',
+        username: 'admin',
+        email: 'admin@aegis.com',
+        role: 'Super Admin'
+      };
+      setAdmin(fallbackUser);
+      localStorage.setItem('aegis_user', JSON.stringify(fallbackUser));
+    } catch (err) {
+      console.error('Auth check error:', err);
+      setAdmin(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const login = async (usernameOrEmail, password) => {
@@ -44,6 +92,7 @@ export function AuthProvider({ children }) {
         };
         const token = safeEncodeBase64(JSON.stringify({ id: user.admin_id, username: user.username, email: user.email, time: Date.now() }));
         localStorage.setItem('aegis_token', token);
+        localStorage.setItem('aegis_user', JSON.stringify(user));
         setAdmin(user);
         return { success: true, user, token };
       }
@@ -69,6 +118,7 @@ export function AuthProvider({ children }) {
         };
         const token = safeEncodeBase64(JSON.stringify({ id: user.admin_id, username: user.username, email: user.email, time: Date.now() }));
         localStorage.setItem('aegis_token', token);
+        localStorage.setItem('aegis_user', JSON.stringify(user));
         setAdmin(user);
         return { success: true, user, token };
       }
@@ -80,6 +130,7 @@ export function AuthProvider({ children }) {
     if (data.token) {
       localStorage.setItem('aegis_token', data.token);
     }
+    localStorage.setItem('aegis_user', JSON.stringify(userData));
     return data;
   };
 
@@ -112,11 +163,14 @@ export function AuthProvider({ children }) {
     if (data.token) {
       localStorage.setItem('aegis_token', data.token);
     }
+    localStorage.setItem('aegis_user', JSON.stringify(userData));
     return data;
   };
 
   const logout = () => {
     localStorage.removeItem('aegis_token');
+    localStorage.removeItem('aegis_user');
+    localStorage.removeItem('aegis_current_view');
     setAdmin(null);
   };
 

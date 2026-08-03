@@ -21,22 +21,17 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
   const getRoomRent = (r) => Number(r.monthly_rent || r.rent || 0);
 
   // Default to Girls Hostel if available, otherwise first hostel
-  const [selectedHostelId, setSelectedHostelId] = useState(() => {
-    const girlsHostel = hostels.find(h => 
-      (h.hostel_type && h.hostel_type.toLowerCase() === 'girls') ||
-      (h.hostel_name && h.hostel_name.toLowerCase().includes('girls')) ||
-      (h.hostel_name && h.hostel_name.toLowerCase().includes('south'))
-    );
-    if (girlsHostel) return getHostelId(girlsHostel);
-    return hostels.length > 0 ? getHostelId(hostels[0]) : '';
-  });
+  // Default to ALL hostels so all room inventory is visible
+  const [selectedHostelId, setSelectedHostelId] = useState('ALL');
 
-  const activeHostelId = selectedHostelId || (hostels.length > 0 ? getHostelId(hostels[0]) : null);
+  const activeHostelId = selectedHostelId;
   const activeHostelObj = hostels.find(h => String(getHostelId(h)) === String(activeHostelId)) || hostels[0];
 
   const query = searchTerm.toLowerCase().trim();
   const filteredRooms = rooms.filter(r => {
-    const matchesHostel = query ? true : (activeHostelId ? String(r.hostel_id) === String(activeHostelId) : true);
+    const matchesHostel = !selectedHostelId || selectedHostelId === 'ALL' || query
+      ? true
+      : String(r.hostel_id) === String(selectedHostelId);
     const matchesSearch = !query ? true : (
       String(r.room_number || '').toLowerCase().includes(query) ||
       String(r.room_type || '').toLowerCase().includes(query) ||
@@ -118,39 +113,47 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <button
             onClick={handleOpenAddRoomModal}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-purple-500/25 transition-all"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 h-11 rounded-xl bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-purple-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>Add New Room</span>
           </button>
         </div>
       </div>
 
       {/* Hostel Tab Switcher */}
-      {hostels.length > 1 && (
-        <div className="flex border-b border-dark-border light:border-slate-200 gap-8 overflow-x-auto">
-          {hostels.map(hostel => {
-            const hId = getHostelId(hostel);
-            const isActive = String(activeHostelId) === String(hId);
-            return (
-              <button
-                key={hId}
-                onClick={() => setSelectedHostelId(hId)}
-                className={`pb-4 px-1 text-base font-bold font-heading transition-all whitespace-nowrap border-b-2 ${
-                  isActive
-                    ? 'border-purple-500 text-purple-400'
-                    : 'border-transparent text-slate-400 light:text-slate-600 hover:text-slate-200 light:hover:text-slate-900'
-                }`}
-              >
-                {getHostelName(hostel)} ({getHostelType(hostel)})
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div className="flex border-b border-dark-border light:border-slate-200 gap-6 overflow-x-auto">
+        <button
+          onClick={() => setSelectedHostelId('ALL')}
+          className={`pb-4 px-2 text-base font-bold font-heading transition-all whitespace-nowrap border-b-2 ${
+            selectedHostelId === 'ALL'
+              ? 'border-purple-500 text-purple-400'
+              : 'border-transparent text-slate-400 light:text-slate-600 hover:text-slate-200 light:hover:text-slate-900'
+          }`}
+        >
+          All Rooms ({rooms.length})
+        </button>
+        {hostels.map(hostel => {
+          const hId = getHostelId(hostel);
+          const isActive = String(activeHostelId) === String(hId);
+          return (
+            <button
+              key={hId}
+              onClick={() => setSelectedHostelId(hId)}
+              className={`pb-4 px-1 text-base font-bold font-heading transition-all whitespace-nowrap border-b-2 ${
+                isActive
+                  ? 'border-purple-500 text-purple-400'
+                  : 'border-transparent text-slate-400 light:text-slate-600 hover:text-slate-200 light:hover:text-slate-900'
+              }`}
+            >
+              {getHostelName(hostel)} ({getHostelType(hostel)})
+            </button>
+          );
+        })}
+      </div>
 
       {/* Rooms Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
