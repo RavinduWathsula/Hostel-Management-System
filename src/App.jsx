@@ -613,8 +613,14 @@ export function AppContent() {
   };
 
   const handleLoadStudentChart = async (studentId, days) => {
-    const res = await fetch(`/api/attendance/student/${studentId}?days=${days}`);
-    return await res.json();
+    try {
+      const res = await fetch(`/api/attendance/student/${studentId}?days=${days}`);
+      const text = await res.text();
+      return text ? JSON.parse(text) : { success: false };
+    } catch (err) {
+      console.warn('Error loading student attendance chart:', err);
+      return { success: false };
+    }
   };
 
   if (authLoading) {

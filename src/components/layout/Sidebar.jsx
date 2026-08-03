@@ -19,7 +19,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
-export function Sidebar({ currentView, setCurrentView, counts = {}, mobileOpen, setMobileOpen }) {
+export function Sidebar({ currentView, setCurrentView = () => {}, counts = {}, mobileOpen = false, setMobileOpen = () => {} }) {
   const { theme, toggleTheme } = useTheme();
   const { logout } = useAuth();
 

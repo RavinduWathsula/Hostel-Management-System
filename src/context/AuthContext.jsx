@@ -20,43 +20,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   const checkAuth = async () => {
-    try {
-      const token = localStorage.getItem('aegis_token');
-      if (!token) {
-        setAdmin(null);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/auth/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && (data.user || data.admin)) {
-            setAdmin(data.user || data.admin);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch (e) {}
-
-      // Persistent Session Fallback: If token exists in localStorage, maintain login state across page refreshes
-      const fallbackUser = {
-        admin_id: 1,
-        full_name: 'System Warden Admin',
-        username: 'admin',
-        email: 'admin@aegis.com',
-        role: 'Super Admin'
-      };
-      setAdmin(fallbackUser);
-    } catch (err) {
-      console.error('Auth check error:', err);
-      setAdmin(null);
-    } finally {
-      setLoading(false);
-    }
+    // Require explicit admin authentication on page launch/navigation so the login page is always presented first
+    setAdmin(null);
+    setLoading(false);
   };
 
   const login = async (usernameOrEmail, password) => {

@@ -43,11 +43,16 @@ function hashPassword(password) {
 // Auto-initialize Schema and Seed Data from schema.sql
 async function initDatabaseSchema() {
   try {
-    const schemaPath = path.join(__dirname, 'schema.sql');
-    if (fs.existsSync(schemaPath)) {
-      const sqlContent = fs.readFileSync(schemaPath, 'utf8');
-      await db.query(sqlContent);
-      console.log('[Database] Database tables & views verified and ready.');
+    const [tableCheck] = await db.query("SHOW TABLES LIKE 'hostel'");
+    if (tableCheck && tableCheck.length === 0) {
+      const schemaPath = path.join(__dirname, 'schema.sql');
+      if (fs.existsSync(schemaPath)) {
+        const sqlContent = fs.readFileSync(schemaPath, 'utf8');
+        await db.query(sqlContent);
+        console.log('[Database] Fresh database tables & initial seed data created.');
+      }
+    } else {
+      console.log('[Database] Database tables verified. Preserving custom additions and deletions.');
     }
   } catch (err) {
     console.error('[Database] Schema initialization notice:', err.message);

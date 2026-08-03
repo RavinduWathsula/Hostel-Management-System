@@ -74,11 +74,14 @@ export function StudentsView({ students = [], hostels = [], onAddStudent, onEdit
     setIsModalOpen(false);
   };
 
+  const query = String(searchTerm || '').toLowerCase().trim();
   const filteredStudents = students.filter(student => {
-    const matchesSearch =
-      student.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.admission_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!student) return false;
+    const matchesSearch = !query ||
+      (student.full_name || '').toLowerCase().includes(query) ||
+      (student.admission_no || '').toLowerCase().includes(query) ||
+      (student.email || '').toLowerCase().includes(query) ||
+      (student.course || '').toLowerCase().includes(query);
     const matchesHostel = hostelFilter === 'ALL' || String(student.hostel_id) === String(hostelFilter);
     const matchesStatus = statusFilter === 'ALL' || student.status === statusFilter;
     return matchesSearch && matchesHostel && matchesStatus;
