@@ -17,7 +17,10 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
 
   const getRoomId = (r) => r.room_id || r.id;
   const getRoomCapacity = (r) => Number(r.capacity || 2);
-  const getRoomOccupied = (r) => Number(r.occupied_seats ?? r.occupied_beds ?? r.occupied ?? 0);
+  const getRoomOccupied = (r) => {
+    const rId = getRoomId(r);
+    return allocations.filter(a => String(a.room_id) === String(rId) && (a.status === 'Active' || !a.status)).length;
+  };
   const getRoomRent = (r) => Number(r.monthly_rent || r.rent || 0);
 
   // Default to Girls Hostel if available, otherwise first hostel

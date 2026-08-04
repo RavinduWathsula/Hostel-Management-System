@@ -117,7 +117,7 @@ export function StudentsView({ students = [], hostels = [], onAddStudent, onEdit
             type="text"
             placeholder="Search student by name, admission no, or email..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setLocalSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-dark-input light:bg-slate-100 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>

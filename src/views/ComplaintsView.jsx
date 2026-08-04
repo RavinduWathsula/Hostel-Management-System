@@ -172,9 +172,12 @@ export function ComplaintsView({ complaints = [], students = [], onLogComplaint,
               className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-rose-500"
             >
               <option value="">-- General / Facility Issue --</option>
-              {students.map(st => (
-                <option key={st.id} value={st.id}>{st.full_name} ({st.admission_no})</option>
-              ))}
+              {students.map(st => {
+                const sId = st.student_id || st.id;
+                return (
+                  <option key={sId} value={sId}>{st.full_name} ({st.admission_no})</option>
+                );
+              })}
             </select>
           </div>
 

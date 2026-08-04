@@ -13,6 +13,42 @@ import { StaffView } from './views/StaffView';
 import { LeavesView } from './views/LeavesView';
 import { VisitorsView } from './views/VisitorsView';
 import { AttendanceView } from './views/AttendanceView';
+import {
+  initialHostels,
+  initialRooms,
+  initialStudents,
+  initialAllocations,
+  initialFeePayments,
+  initialFeeSummaries,
+  initialComplaints,
+  initialStaff,
+  initialLeaves,
+  initialVisitors,
+  initialStats
+} from './data/initialData';
+
+// Local storage helper
+const getStoredData = (key, fallback) => {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      if (saved.includes('Boys') || saved.includes('Kasun') || saved.includes('Ruwan')) {
+        localStorage.removeItem(key);
+        return fallback;
+      }
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (typeof parsed === 'object' && parsed !== null && Object.keys(parsed).length > 0) return parsed;
+    }
+  } catch (e) {}
+  return fallback;
+};
+
+const setStoredData = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {}
+};
 
 export function AppContent() {
   const { admin, loading: authLoading } = useAuth();
@@ -28,18 +64,18 @@ export function AppContent() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [dbOnline, setDbOnline] = useState(true);
 
-  // Application Data States
-  const [stats, setStats] = useState({});
-  const [hostels, setHostels] = useState([]);
-  const [rooms, setRooms] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [allocations, setAllocations] = useState([]);
-  const [feeSummary, setFeeSummary] = useState([]);
-  const [feePayments, setFeePayments] = useState([]);
-  const [complaints, setComplaints] = useState([]);
-  const [staff, setStaff] = useState([]);
-  const [leaves, setLeaves] = useState([]);
-  const [visitors, setVisitors] = useState([]);
+  // Application Data States initialized with LocalStorage or Initial Seed Data
+  const [stats, setStats] = useState(() => getStoredData('aegis_stats', initialStats));
+  const [hostels, setHostels] = useState(() => getStoredData('aegis_hostels', initialHostels));
+  const [rooms, setRooms] = useState(() => getStoredData('aegis_rooms', initialRooms));
+  const [students, setStudents] = useState(() => getStoredData('aegis_students', initialStudents));
+  const [allocations, setAllocations] = useState(() => getStoredData('aegis_allocations', initialAllocations));
+  const [feeSummary, setFeeSummary] = useState(() => getStoredData('aegis_fee_summary', initialFeeSummaries));
+  const [feePayments, setFeePayments] = useState(() => getStoredData('aegis_fee_payments', initialFeePayments));
+  const [complaints, setComplaints] = useState(() => getStoredData('aegis_complaints', initialComplaints));
+  const [staff, setStaff] = useState(() => getStoredData('aegis_staff', initialStaff));
+  const [leaves, setLeaves] = useState(() => getStoredData('aegis_leaves', initialLeaves));
+  const [visitors, setVisitors] = useState(() => getStoredData('aegis_visitors', initialVisitors));
 
   useEffect(() => {
     if (admin) {
@@ -92,19 +128,91 @@ export function AppContent() {
 
       const isConnected = Boolean(statsRes.success || hostelsRes.success || studentsRes.success || roomsRes.success);
       setDbOnline(isConnected);
-      if (statsRes.success) setStats(statsRes.kpis || statsRes.stats || {});
-      if (hostelsRes.success) setHostels(hostelsRes.data || hostelsRes.hostels || []);
-      if (roomsRes.success) setRooms(roomsRes.data || roomsRes.rooms || []);
-      if (studentsRes.success) setStudents(studentsRes.data || studentsRes.students || []);
-      if (allocationsRes.success) setAllocations(allocationsRes.data || allocationsRes.allocations || []);
-      if (feesRes.success) {
-        setFeeSummary(feesRes.summaries || feesRes.data || []);
-        setFeePayments(feesRes.payments || feesRes.data || []);
+
+      if (statsRes.success) {
+        const fetchedStats = statsRes.kpis || statsRes.stats || {};
+        if (Object.keys(fetchedStats).length > 0) {
+          setStats(fetchedStats);
+          setStoredData('aegis_stats', fetchedStats);
+        }
       }
-      if (complaintsRes.success) setComplaints(complaintsRes.data || complaintsRes.complaints || []);
-      if (staffRes.success) setStaff(staffRes.data || staffRes.staff || []);
-      if (leavesRes.success) setLeaves(leavesRes.data || leavesRes.leaves || []);
-      if (visitorsRes.success) setVisitors(visitorsRes.data || visitorsRes.visitors || []);
+
+      if (hostelsRes.success) {
+        const fetchedHostels = hostelsRes.data || hostelsRes.hostels || [];
+        if (fetchedHostels.length > 0) {
+          setHostels(fetchedHostels);
+          setStoredData('aegis_hostels', fetchedHostels);
+        }
+      }
+
+      if (roomsRes.success) {
+        const fetchedRooms = roomsRes.data || roomsRes.rooms || [];
+        if (fetchedRooms.length > 0) {
+          setRooms(fetchedRooms);
+          setStoredData('aegis_rooms', fetchedRooms);
+        }
+      }
+
+      if (studentsRes.success) {
+        const fetchedStudents = studentsRes.data || studentsRes.students || [];
+        if (fetchedStudents.length > 0) {
+          setStudents(fetchedStudents);
+          setStoredData('aegis_students', fetchedStudents);
+        }
+      }
+
+      if (allocationsRes.success) {
+        const fetchedAllocations = allocationsRes.data || allocationsRes.allocations || [];
+        if (fetchedAllocations.length > 0) {
+          setAllocations(fetchedAllocations);
+          setStoredData('aegis_allocations', fetchedAllocations);
+        }
+      }
+
+      if (feesRes.success) {
+        const fetchedSummary = feesRes.summaries || feesRes.data || [];
+        const fetchedPayments = feesRes.payments || feesRes.data || [];
+        if (fetchedSummary.length > 0) {
+          setFeeSummary(fetchedSummary);
+          setStoredData('aegis_fee_summary', fetchedSummary);
+        }
+        if (fetchedPayments.length > 0) {
+          setFeePayments(fetchedPayments);
+          setStoredData('aegis_fee_payments', fetchedPayments);
+        }
+      }
+
+      if (complaintsRes.success) {
+        const fetchedComplaints = complaintsRes.data || complaintsRes.complaints || [];
+        if (fetchedComplaints.length > 0) {
+          setComplaints(fetchedComplaints);
+          setStoredData('aegis_complaints', fetchedComplaints);
+        }
+      }
+
+      if (staffRes.success) {
+        const fetchedStaff = staffRes.data || staffRes.staff || [];
+        if (fetchedStaff.length > 0) {
+          setStaff(fetchedStaff);
+          setStoredData('aegis_staff', fetchedStaff);
+        }
+      }
+
+      if (leavesRes.success) {
+        const fetchedLeaves = leavesRes.data || leavesRes.leaves || [];
+        if (fetchedLeaves.length > 0) {
+          setLeaves(fetchedLeaves);
+          setStoredData('aegis_leaves', fetchedLeaves);
+        }
+      }
+
+      if (visitorsRes.success) {
+        const fetchedVisitors = visitorsRes.data || visitorsRes.visitors || [];
+        if (fetchedVisitors.length > 0) {
+          setVisitors(fetchedVisitors);
+          setStoredData('aegis_visitors', fetchedVisitors);
+        }
+      }
     } catch (err) {
       console.error('Failed to load API data:', err);
       setDbOnline(false);
@@ -113,33 +221,77 @@ export function AppContent() {
 
   // Student Handlers
   const handleAddStudent = async (studentData) => {
-    const res = await fetch('/api/students', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(studentData)
-    });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
+    try {
+      const res = await fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(studentData)
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        alert(data.error || 'Failed to add resident student');
+      }
+      return data;
+    } catch (err) {
+      console.warn('Network error adding student, fallback to local state:', err);
+      const newSt = {
+        student_id: Date.now(),
+        id: Date.now(),
+        admission_no: studentData.admission_no || `HS${Date.now().toString().slice(-6)}`,
+        full_name: studentData.full_name,
+        gender: studentData.gender || 'Female',
+        dob: studentData.dob || '',
+        phone: studentData.phone,
+        email: studentData.email || '',
+        course: studentData.course || 'General',
+        year_of_study: studentData.year_of_study || 1,
+        address: studentData.address || '',
+        guardian_name: studentData.guardian_name || '',
+        guardian_phone: studentData.guardian_phone || '',
+        status: 'Active'
+      };
+      setStudents(prev => [newSt, ...prev]);
+      return { success: true, studentId: newSt.id };
+    }
   };
 
   const handleEditStudent = async (id, studentData) => {
-    const res = await fetch(`/api/students/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(studentData)
-    });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
+    try {
+      const res = await fetch(`/api/students/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(studentData)
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
+      if (data.success) {
+        await fetchAllData();
+      } else {
+        setStudents(prev => prev.map(s => String(s.student_id || s.id) === String(id) ? { ...s, ...studentData } : s));
+      }
+      return data;
+    } catch (err) {
+      setStudents(prev => prev.map(s => String(s.student_id || s.id) === String(id) ? { ...s, ...studentData } : s));
+      return { success: true };
+    }
   };
 
   const handleDeleteStudent = async (id) => {
     if (!window.confirm('Are you sure you want to remove this resident?')) return;
-    const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.success) fetchAllData();
-    return data;
+    try {
+      const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
+      setStudents(prev => prev.filter(s => String(s.student_id || s.id) !== String(id)));
+      if (data.success) await fetchAllData();
+      return data;
+    } catch (err) {
+      setStudents(prev => prev.filter(s => String(s.student_id || s.id) !== String(id)));
+      return { success: true };
+    }
   };
 
   // Room & Allocation Handlers

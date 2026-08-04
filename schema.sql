@@ -29,14 +29,15 @@ INSERT IGNORE INTO admin_users (admin_id, full_name, username, email, password_h
 CREATE TABLE IF NOT EXISTS hostel (
   hostel_id INT AUTO_INCREMENT PRIMARY KEY,
   hostel_name VARCHAR(100) NOT NULL,
-  hostel_type ENUM('Boys', 'Girls', 'Co-ed') NOT NULL DEFAULT 'Boys',
+  hostel_type ENUM('Boys', 'Girls', 'Co-ed') NOT NULL DEFAULT 'Girls',
   address TEXT,
   total_floors INT DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO hostel (hostel_id, hostel_name, hostel_type, address, total_floors) VALUES
-(1, 'Aegis Girls Hostel', 'Girls', '14 University Avenue, Girls Block', 4);
+(1, 'Aegis Girls Hostel - Main Block', 'Girls', '14 University Avenue, Girls Main Block', 4),
+(2, 'Aegis Girls Hostel - Annex Block', 'Girls', '18 University Avenue, Girls Annex Block', 4);
 
 -- 3. Room Table
 CREATE TABLE IF NOT EXISTS room (
@@ -58,7 +59,9 @@ INSERT IGNORE INTO room (room_id, hostel_id, room_number, capacity, occupied_sea
 (3, 1, '201', 2, 1, 2, 'Single Deluxe', 7500.00),
 (4, 1, 'G-101', 2, 2, 1, 'Single Deluxe', 8000.00),
 (5, 1, 'G-102', 3, 1, 1, 'Double Sharing', 6000.00),
-(6, 1, 'E-301', 1, 1, 3, 'Suite', 12000.00);
+(6, 1, 'E-301', 1, 1, 3, 'Suite', 12000.00),
+(7, 2, 'A-101', 2, 1, 1, 'Single Deluxe', 7500.00),
+(8, 2, 'A-102', 3, 2, 1, 'Double Sharing', 5500.00);
 
 -- 4. Student Table
 CREATE TABLE IF NOT EXISTS student (
@@ -79,7 +82,9 @@ CREATE TABLE IF NOT EXISTS student (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO student (student_id, admission_no, full_name, gender, dob, phone, email, course, year_of_study, address, guardian_name, guardian_phone, status) VALUES
+(1, 'STU202601', 'Kaveesha Perera', 'Female', '2002-05-14', '+94771234567', 'kaveesha@student.edu', 'Computer Science', 3, '45 Temple Rd, Colombo', 'Nimali Perera', '+94712345678', 'Active'),
 (2, 'STU202602', 'Ananya Sharma', 'Female', '2003-08-22', '+94772345678', 'ananya@student.edu', 'Information Technology', 2, '78 Park Rd, Kandy', 'Rajesh Sharma', '+94718765432', 'Active'),
+(3, 'STU202603', 'Tharushi Fernando', 'Female', '2001-11-03', '+94773456789', 'tharushi@student.edu', 'Software Engineering', 4, '12 Main St, Galle', 'Sunitha Fernando', '+94719876543', 'Active'),
 (4, 'STU202604', 'Dilini Silva', 'Female', '2003-02-17', '+94774567890', 'dilini@student.edu', 'Data Science', 2, '89 Hill St, Nuwara Eliya', 'Kamal Silva', '+94716543210', 'Active');
 
 -- 5. Room Allocation Table
@@ -95,7 +100,9 @@ CREATE TABLE IF NOT EXISTS room_allocation (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO room_allocation (allocation_id, student_id, room_id, bed_number, allocated_date, status) VALUES
+(1, 1, 7, 1, '2026-01-10', 'Active'),
 (2, 2, 4, 1, '2026-01-12', 'Active'),
+(3, 3, 8, 1, '2026-01-15', 'Active'),
 (4, 4, 4, 2, '2026-01-18', 'Active');
 
 -- 6. Staff Table
@@ -112,10 +119,10 @@ CREATE TABLE IF NOT EXISTS staff (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO staff (staff_id, full_name, designation, phone, email, hostel_id, salary) VALUES
-(1, 'Mahesh Bandara', 'Senior Warden', '+94770000001', 'mahesh@aegis.com', 1, 85000.00),
+(1, 'Maheshwari Bandara', 'Chief Lady Warden', '+94770000001', 'maheshwari@aegis.com', 1, 85000.00),
 (2, 'Kumari Wickramasinghe', 'Lady Warden', '+94770000002', 'kumari@aegis.com', 2, 85000.00),
-(3, 'Saman Kumara', 'Maintenance Supervisor', '+94770000003', 'saman@aegis.com', 1, 55000.00),
-(4, 'Priyani Ratnayake', 'Security In-Charge', '+94770000004', 'priyani@aegis.com', 3, 60000.00);
+(3, 'Sanduni Kumara', 'Hostel Supervisor', '+94770000003', 'sanduni@aegis.com', 1, 55000.00),
+(4, 'Priyani Ratnayake', 'Security In-Charge', '+94770000004', 'priyani@aegis.com', 2, 60000.00);
 
 -- 7. Complaint Table
 CREATE TABLE IF NOT EXISTS complaint (
