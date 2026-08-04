@@ -148,8 +148,20 @@ export function AppContent() {
       if (roomsRes.success) {
         const fetchedRooms = roomsRes.data || roomsRes.rooms || [];
         if (fetchedRooms.length > 0) {
-          setRooms(fetchedRooms);
-          setStoredData('aegis_rooms', fetchedRooms);
+          setRooms(prev => {
+            const saved = getStoredData('aegis_rooms', null);
+            if (saved && Array.isArray(saved)) {
+              const savedIds = saved.map(r => String(r.room_id || r.id));
+              const synced = fetchedRooms.filter(r => savedIds.includes(String(r.room_id || r.id)));
+              const fetchedIds = fetchedRooms.map(r => String(r.room_id || r.id));
+              const localOnly = saved.filter(r => !fetchedIds.includes(String(r.room_id || r.id)));
+              const combined = [...synced, ...localOnly];
+              setStoredData('aegis_rooms', combined);
+              return combined;
+            }
+            setStoredData('aegis_rooms', fetchedRooms);
+            return fetchedRooms;
+          });
         }
       }
 

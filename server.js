@@ -543,14 +543,14 @@ app.post('/api/rooms', async (req, res) => {
 });
 
 const deleteRoomHandler = async (req, res) => {
+  const { id } = req.params;
+  memoryStore.rooms = memoryStore.rooms.filter(r => String(r.room_id) !== String(id) && String(r.id) !== String(id) && String(r.room_number) !== String(id));
   try {
-    const { id } = req.params;
     await db.query("DELETE FROM room_allocation WHERE room_id = ?", [id]);
     await db.query("UPDATE complaint SET room_id = NULL WHERE room_id = ?", [id]);
     await db.query("DELETE FROM room WHERE room_id = ?", [id]);
     res.json({ success: true, message: 'Room deleted successfully' });
   } catch (error) {
-    memoryStore.rooms = memoryStore.rooms.filter(r => String(r.room_id) !== String(req.params.id) && String(r.id) !== String(req.params.id));
     res.json({ success: true, message: 'Room deleted successfully' });
   }
 };

@@ -41,6 +41,10 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
       String(r.hostel_name || '').toLowerCase().includes(query)
     );
     return matchesHostel && matchesSearch;
+  }).sort((a, b) => {
+    const numA = String(a.room_number || '');
+    const numB = String(b.room_number || '');
+    return numA.localeCompare(numB, undefined, { numeric: true, sensitivity: 'base' });
   });
 
   const formatLKR = (amount) => {
