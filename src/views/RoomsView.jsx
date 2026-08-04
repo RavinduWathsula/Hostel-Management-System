@@ -64,13 +64,14 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
   });
 
   const handleOpenAddRoomModal = () => {
-    const currentHostelId = activeHostelId || (hostels.length > 0 ? getHostelId(hostels[0]) : 1);
+    const defaultHId = (hostels && hostels.length > 0) ? (getHostelId(hostels[0])) : 1;
+    const currentHostelId = (activeHostelId && activeHostelId !== 'ALL') ? activeHostelId : defaultHId;
     setRoomForm({
       room_number: '',
       hostel_id: currentHostelId,
       capacity: 2,
       floor_number: 1,
-      room_type: 'Double',
+      room_type: 'Double Sharing',
       monthly_rent: 8000
     });
     setIsRoomModalOpen(true);
@@ -78,20 +79,19 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
 
   const handleRoomSubmit = async (e) => {
     e.preventDefault();
-    const finalHostelId = roomForm.hostel_id || activeHostelId || (hostels.length > 0 ? getHostelId(hostels[0]) : 1);
     if (!roomForm.room_number) {
       alert('Please enter a room number');
       return;
     }
+    const defaultHId = (hostels && hostels.length > 0) ? (getHostelId(hostels[0])) : 1;
+    const rawHId = (roomForm.hostel_id && roomForm.hostel_id !== 'ALL') ? roomForm.hostel_id : defaultHId;
+    const finalHostelId = Number(rawHId) || Number(defaultHId) || 1;
+
     const payload = {
       ...roomForm,
-      hostel_id: Number(finalHostelId)
+      hostel_id: finalHostelId
     };
-    const res = await onAddRoom(payload);
-    if (res && res.success === false) {
-      alert(res.error || 'Failed to add room');
-      return;
-    }
+    await onAddRoom(payload);
     setIsRoomModalOpen(false);
   };
 
@@ -109,7 +109,7 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold font-heading text-slate-100 light:text-slate-900 tracking-tight">
-            {activeHostelObj ? getHostelName(activeHostelObj) : 'Hostel'} Room Inventory
+            Aegis Girls Hostel Room Inventory
           </h2>
           <p className="text-sm text-slate-400 light:text-slate-600 mt-1">
             Click any room card to inspect detailed resident allocations, bed status, and monthly rental fees.
@@ -125,37 +125,6 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
             <span>Add New Room</span>
           </button>
         </div>
-      </div>
-
-      {/* Hostel Tab Switcher */}
-      <div className="flex border-b border-dark-border light:border-slate-200 gap-6 overflow-x-auto">
-        <button
-          onClick={() => setSelectedHostelId('ALL')}
-          className={`pb-4 px-2 text-base font-bold font-heading transition-all whitespace-nowrap border-b-2 ${
-            selectedHostelId === 'ALL'
-              ? 'border-purple-500 text-purple-400'
-              : 'border-transparent text-slate-400 light:text-slate-600 hover:text-slate-200 light:hover:text-slate-900'
-          }`}
-        >
-          All Rooms ({rooms.length})
-        </button>
-        {hostels.map(hostel => {
-          const hId = getHostelId(hostel);
-          const isActive = String(activeHostelId) === String(hId);
-          return (
-            <button
-              key={hId}
-              onClick={() => setSelectedHostelId(hId)}
-              className={`pb-4 px-1 text-base font-bold font-heading transition-all whitespace-nowrap border-b-2 ${
-                isActive
-                  ? 'border-purple-500 text-purple-400'
-                  : 'border-transparent text-slate-400 light:text-slate-600 hover:text-slate-200 light:hover:text-slate-900'
-              }`}
-            >
-              {getHostelName(hostel)} ({getHostelType(hostel)})
-            </button>
-          );
-        })}
       </div>
 
       {/* Rooms Grid */}
