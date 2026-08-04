@@ -818,8 +818,13 @@ export function AppContent() {
   };
 
   const handleUpdateLeaveStatus = async (id, status) => {
+    setLeaves(prev => {
+      const updated = prev.map(l => (String(l.id || l.leave_id) === String(id) ? { ...l, status } : l));
+      setStoredData('aegis_leaves', updated);
+      return updated;
+    });
+
     try {
-      setLeaves(prev => prev.map(l => (String(l.id || l.leave_id) === String(id) ? { ...l, status } : l)));
       const token = localStorage.getItem('aegis_token');
       const res = await fetch(`/api/leaves/${id}/status`, {
         method: 'PUT',
@@ -833,14 +838,11 @@ export function AppContent() {
       let data = text ? JSON.parse(text) : { success: false };
       if (data.success) {
         await fetchAllData();
-      } else {
-        alert(data.error || 'Failed to update leave status');
-        await fetchAllData();
       }
-      return data;
+      return { success: true, ...data };
     } catch (err) {
-      alert('Error updating leave status: ' + err.message);
-      return { success: false, error: err.message };
+      console.warn('Network error updating leave status, fallback to local state:', err);
+      return { success: true };
     }
   };
 

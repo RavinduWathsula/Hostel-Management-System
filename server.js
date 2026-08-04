@@ -1377,6 +1377,12 @@ const handleUpdateLeaveStatusServer = async (req, res) => {
       "UPDATE leave_application SET status = ?, approved_by = ? WHERE leave_id = ?",
       [status, staffId, id]
     );
+
+    const lIdx = memoryStore.leaves.findIndex(l => String(l.leave_id) === String(id) || String(l.id) === String(id));
+    if (lIdx !== -1) {
+      memoryStore.leaves[lIdx].status = status;
+    }
+
     res.json({ success: true, message: `Leave application status updated to ${status}` });
   } catch (error) {
     const lIdx = memoryStore.leaves.findIndex(l => String(l.leave_id) === String(id) || String(l.id) === String(id));

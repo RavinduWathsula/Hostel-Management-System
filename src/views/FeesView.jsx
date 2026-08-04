@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, Plus, Receipt, Wallet, Search, CheckCircle, AlertCircle } from 'lucide-react';
+import { CreditCard, Plus, Receipt, Wallet, Search, CheckCircle, AlertCircle, Filter, Calendar } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 import { KpiCard } from '../components/common/KpiCard';
 
@@ -7,6 +7,8 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
   const [activeTab, setActiveTab] = useState('payments'); // 'payments' | 'dues'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFeeType, setSelectedFeeType] = useState('ALL');
+  const [selectedMonth, setSelectedMonth] = useState('ALL');
   
   const [formData, setFormData] = useState({
     student_id: '',
@@ -27,14 +29,15 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
   const totalDue = feeSummary.reduce((acc, s) => acc + Number(s.total_due || 0), 0);
 
   const handleOpenModal = (studentId = '') => {
+    const defaultStudentId = studentId || (students.length > 0 ? (students[0].student_id || students[0].id) : '');
     setFormData({
-      student_id: studentId,
+      student_id: defaultStudentId,
       fee_type: 'Hostel Fee',
       amount: '',
       payment_mode: 'Cash',
       payment_date: new Date().toISOString().substring(0, 10),
       month_for: new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
-      receipt_no: `RCPT-${Date.now().toString().slice(-6)}`,
+      receipt_no: `RCPT-${Math.floor(100000 + Math.random() * 900000)}`,
       remarks: ''
     });
     setIsModalOpen(true);
@@ -42,14 +45,17 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.student_id || !formData.amount) {
-      alert('Please select a student and enter a valid amount.');
+    const targetStudentId = formData.student_id || (students.length > 0 ? (students[0].student_id || students[0].id) : '');
+    if (!targetStudentId || !formData.amount) {
+      alert('Please select a resident student and enter a valid amount.');
       return;
     }
-    const res = await onRecordFee(formData);
-    if (res && res.success !== false) {
-      setIsModalOpen(false);
-    }
+    const payload = {
+      ...formData,
+      student_id: targetStudentId
+    };
+    await onRecordFee(payload);
+    setIsModalOpen(false);
   };
 
   const effectiveSearch = (searchTerm || searchQuery).toLowerCase().trim();
@@ -57,12 +63,25 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
   // Filter payments
   const filteredPayments = feePayments.filter(p => {
     const query = effectiveSearch;
-    if (!query) return true;
     const studentName = (p.student_name || p.full_name || '').toLowerCase();
     const admissionNo = (p.admission_no || '').toLowerCase();
     const receiptNo = (p.receipt_no || '').toLowerCase();
     const feeType = (p.fee_type || '').toLowerCase();
-    return studentName.includes(query) || admissionNo.includes(query) || receiptNo.includes(query) || feeType.includes(query);
+    const monthFor = (p.month_for || '').toLowerCase();
+
+    const matchesQuery = !query ? true : (
+      studentName.includes(query) || admissionNo.includes(query) || receiptNo.includes(query) || feeType.includes(query) || monthFor.includes(query)
+    );
+
+    const matchesFeeType = !selectedFeeType || selectedFeeType === 'ALL' ? true : (
+      feeType.includes(selectedFeeType.toLowerCase())
+    );
+
+    const matchesMonth = !selectedMonth || selectedMonth === 'ALL' ? true : (
+      monthFor.includes(selectedMonth.toLowerCase())
+    );
+
+    return matchesQuery && matchesFeeType && matchesMonth;
   });
 
   // Filter summaries
@@ -75,7 +94,7 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
   });
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in font-body">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold font-heading text-slate-100 light:text-slate-900 tracking-tight">
@@ -102,9 +121,10 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
         <KpiCard title="Transactions Logged" value={feePayments.length} icon={Receipt} color="purple" />
       </div>
 
-      {/* Navigation Tabs and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-dark-card light:bg-white p-4 border border-dark-border light:border-slate-200 rounded-2xl shadow-sm">
-        <div className="flex items-center gap-2 bg-slate-900/60 light:bg-slate-100 p-1 rounded-xl border border-dark-border light:border-slate-200">
+      {/* Navigation Tabs, Filters, and Search Bar */}
+      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 bg-dark-card light:bg-white p-4 border border-dark-border light:border-slate-200 rounded-2xl shadow-sm">
+        {/* Left Tabs */}
+        <div className="flex items-center gap-2 bg-slate-900/60 light:bg-slate-100 p-1 rounded-xl border border-dark-border light:border-slate-200 shrink-0">
           <button
             onClick={() => setActiveTab('payments')}
             className={`px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all ${
@@ -113,7 +133,7 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
                 : 'text-slate-400 light:text-slate-600 hover:text-slate-200'
             }`}
           >
-            Payment Logs ({feePayments.length})
+            Payment Logs ({filteredPayments.length})
           </button>
           <button
             onClick={() => setActiveTab('dues')}
@@ -127,15 +147,69 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
           </button>
         </div>
 
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search student, receipt, or fee type..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-200 rounded-xl text-xs md:text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-blue-500"
-          />
+        {/* Right Controls: Filters & Search */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 flex-1 xl:max-w-3xl justify-end">
+          {/* Payment For Filter */}
+          <div className="relative w-full sm:w-auto flex-1 min-w-[140px]">
+            <select
+              value={selectedFeeType}
+              onChange={(e) => setSelectedFeeType(e.target.value)}
+              className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-200 rounded-xl text-xs md:text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="ALL">Payment For: All</option>
+              <option value="Hostel">Hostel Monthly Fee</option>
+              <option value="Mess">Mess & Food Fee</option>
+              <option value="Deposit">Caution Deposit</option>
+              <option value="Utility">Utility Fee</option>
+              <option value="Other">Other / Misc</option>
+            </select>
+          </div>
+
+          {/* Choose Month Filter */}
+          <div className="relative w-full sm:w-auto flex-1 min-w-[140px]">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-200 rounded-xl text-xs md:text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="ALL">Choose Month: All</option>
+              <option value="August 2026">August 2026</option>
+              <option value="July 2026">July 2026</option>
+              <option value="June 2026">June 2026</option>
+              <option value="May 2026">May 2026</option>
+              <option value="April 2026">April 2026</option>
+              <option value="March 2026">March 2026</option>
+              <option value="February 2026">February 2026</option>
+              <option value="January 2026">January 2026</option>
+            </select>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative w-full sm:w-auto flex-1 min-w-[180px]">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search student, receipt..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-200 rounded-xl text-xs md:text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* Reset Filters Button */}
+          {(selectedFeeType !== 'ALL' || selectedMonth !== 'ALL' || searchQuery) && (
+            <button
+              onClick={() => {
+                setSelectedFeeType('ALL');
+                setSelectedMonth('ALL');
+                setSearchQuery('');
+              }}
+              className="px-3 py-2 rounded-xl bg-slate-800 light:bg-slate-200 text-slate-300 light:text-slate-700 text-xs font-semibold hover:bg-slate-700 transition-colors shrink-0"
+              title="Reset Filters"
+            >
+              Reset
+            </button>
+          )}
         </div>
       </div>
 
