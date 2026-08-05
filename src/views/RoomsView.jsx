@@ -19,16 +19,29 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
   const getRoomCapacity = (r) => Number(r.capacity || r.bed_count || 0);
 
   const getValidAllocationsForRoom = (rId) => {
-    return allocations.filter(a => {
+    const valid = allocations.filter(a => {
       if (String(a.room_id) !== String(rId)) return false;
       const isStatusActive = a.status === 'Active' || !a.status;
       if (!isStatusActive) return false;
-      const studentObj = students.find(s => 
-        String(s.student_id || s.id) === String(a.student_id) || 
-        (s.admission_no && a.admission_no && String(s.admission_no).toLowerCase() === String(a.admission_no).toLowerCase())
-      );
-      return Boolean(studentObj && studentObj.status !== 'Vacated' && studentObj.status !== 'Inactive');
+      if (students && students.length > 0) {
+        const studentObj = students.find(s => 
+          String(s.student_id || s.id) === String(a.student_id) || 
+          (s.admission_no && a.admission_no && String(s.admission_no).toLowerCase() === String(a.admission_no).toLowerCase())
+        );
+        return Boolean(studentObj && studentObj.status !== 'Vacated' && studentObj.status !== 'Inactive');
+      }
+      return true;
     });
+
+    const seenStudents = new Set();
+    const result = [];
+    for (const alloc of valid) {
+      const stId = String(alloc.student_id || alloc.admission_no || '');
+      if (stId && seenStudents.has(stId)) continue;
+      if (stId) seenStudents.add(stId);
+      result.push(alloc);
+    }
+    return result;
   };
 
   const getRoomOccupied = (r) => {
@@ -209,7 +222,11 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                   {/* Bed Indicator Dots */}
                   <div className="flex items-center gap-2 mb-4">
                     {Array.from({ length: capacity }).map((_, idx) => {
-                      const isOccupied = idx < occupied;
+                      const bedNum = idx + 1;
+                      const validAllocations = getValidAllocationsForRoom(roomId);
+                      const isOccupied = validAllocations.some(a => Number(a.bed_number) === bedNum) || (idx < validAllocations.length);
+                      const occupant = validAllocations.find(a => Number(a.bed_number) === bedNum) || validAllocations[idx];
+                      const occupantName = occupant ? (occupant.student_name || 'Occupied') : null;
                       return (
                         <div
                           key={idx}
@@ -218,9 +235,9 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                               ? 'bg-gradient-to-br from-pink-500 to-purple-600 border-transparent text-white shadow-sm'
                               : 'bg-dark-input light:bg-slate-100 border-dark-border light:border-slate-300 text-slate-400'
                           }`}
-                          title={isOccupied ? `Bed ${idx + 1}: Occupied` : `Bed ${idx + 1}: Available`}
+                          title={isOccupied ? `Bed ${bedNum}: Occupied${occupantName ? ` by ${occupantName}` : ''}` : `Bed ${bedNum}: Available`}
                         >
-                          {idx + 1}
+                          {bedNum}
                         </div>
                       );
                     })}

@@ -77,6 +77,36 @@ const dedupeStudents = (list) => {
   return result;
 };
 
+const dedupeAllocations = (list) => {
+  if (!Array.isArray(list)) return [];
+  const seenStudentIds = new Set();
+  const seenAdmissions = new Set();
+  const result = [];
+  const sorted = [...list].sort((a, b) => Number(b.allocation_id || b.id || 0) - Number(a.allocation_id || a.id || 0));
+
+  for (const item of sorted) {
+    if (!item) continue;
+    if (item.status === 'Vacated' || item.status === 'Inactive' || item.status === 'Transferred') {
+      result.push(item);
+      continue;
+    }
+    const stId = String(item.student_id || '');
+    const admNo = String(item.admission_no || '').trim().toLowerCase();
+
+    if (stId && seenStudentIds.has(stId)) {
+      continue;
+    }
+    if (admNo && seenAdmissions.has(admNo)) {
+      continue;
+    }
+
+    if (stId) seenStudentIds.add(stId);
+    if (admNo) seenAdmissions.add(admNo);
+    result.push(item);
+  }
+  return result;
+};
+
 export function AppContent() {
   const { admin, loading: authLoading } = useAuth();
   const [currentView, setCurrentViewState] = useState(() => {
@@ -103,7 +133,7 @@ export function AppContent() {
   const [hostels, setHostels] = useState(() => getStoredData('aegis_hostels', initialHostels));
   const [rooms, setRooms] = useState(() => getStoredData('aegis_rooms', initialRooms));
   const [students, setStudents] = useState(() => dedupeStudents(getStoredData('aegis_students', []).filter(s => !isDummyStudent(s))));
-  const [allocations, setAllocations] = useState(() => getStoredData('aegis_allocations', []).filter(a => !isDummyStudent(a)));
+  const [allocations, setAllocations] = useState(() => dedupeAllocations(getStoredData('aegis_allocations', []).filter(a => !isDummyStudent(a))));
   const [feeSummary, setFeeSummary] = useState(() => getStoredData('aegis_fee_summary', []));
   const [feePayments, setFeePayments] = useState(() => getStoredData('aegis_fee_payments', []));
   const [complaints, setComplaints] = useState(() => getStoredData('aegis_complaints', []));
@@ -233,9 +263,7 @@ export function AppContent() {
         setAllocations(prev => {
           const saved = (getStoredData('aegis_allocations', []) || []).filter(a => !isDummyStudent(a));
           const baseList = fetchedAllocations.length > 0 ? fetchedAllocations : saved;
-          const baseIds = baseList.map(a => String(a.allocation_id || a.id));
-          const localOnly = saved.filter(a => !baseIds.includes(String(a.allocation_id || a.id)));
-          const combined = [...baseList, ...localOnly];
+          const combined = dedupeAllocations(baseList);
           setStoredData('aegis_allocations', combined);
           return combined;
         });

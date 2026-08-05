@@ -672,6 +672,7 @@ app.post('/api/allocations', async (req, res) => {
       allocated_date: req.body.allocated_from || req.body.allocated_date || new Date().toISOString().substring(0, 10),
       status: 'Active'
     };
+    memoryStore.allocations = memoryStore.allocations.filter(a => String(a.student_id) !== String(req.body.student_id));
     memoryStore.allocations.unshift(newAlloc);
     return res.json({ success: true, message: 'Room allocated successfully', allocation_id: newAlloc.allocation_id });
   }
