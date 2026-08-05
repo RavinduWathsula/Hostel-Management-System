@@ -8,7 +8,18 @@ export function AllocationsView({ allocations = [], students = [], hostels = [],
   const [errorMsg, setErrorMsg] = useState('');
 
   const query = searchTerm.toLowerCase().trim();
-  const filteredAllocations = allocations.filter(a => {
+  const validAllocations = allocations.filter(a => {
+    if (!a) return false;
+    const isStatusActive = a.status === 'Active' || !a.status;
+    if (!isStatusActive) return false;
+    const studentObj = students.find(s => 
+      String(s.student_id || s.id) === String(a.student_id) || 
+      (s.admission_no && a.admission_no && String(s.admission_no).toLowerCase() === String(a.admission_no).toLowerCase())
+    );
+    return Boolean(studentObj && studentObj.status !== 'Vacated' && studentObj.status !== 'Inactive');
+  });
+
+  const filteredAllocations = validAllocations.filter(a => {
     if (!query) return true;
     return (
       (a.student_name || '').toLowerCase().includes(query) ||

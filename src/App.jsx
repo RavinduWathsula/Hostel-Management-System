@@ -46,6 +46,37 @@ const setStoredData = (key, value) => {
   } catch (e) {}
 };
 
+const dedupeStudents = (list) => {
+  if (!Array.isArray(list)) return [];
+  const seenIds = new Set();
+  const seenAdmissions = new Set();
+  const seenNamesAndPhones = new Set();
+  const result = [];
+
+  for (const item of list) {
+    if (!item) continue;
+    const idStr = String(item.student_id || item.id || '');
+    const admStr = String(item.admission_no || '').trim().toLowerCase();
+    const namePhoneStr = `${String(item.full_name || '').trim().toLowerCase()}_${String(item.phone || '').trim()}`;
+
+    if (admStr && seenAdmissions.has(admStr)) {
+      continue;
+    }
+    if (idStr && seenIds.has(idStr)) {
+      continue;
+    }
+    if (namePhoneStr.length > 1 && seenNamesAndPhones.has(namePhoneStr)) {
+      continue;
+    }
+
+    if (admStr) seenAdmissions.add(admStr);
+    if (idStr) seenIds.add(idStr);
+    if (namePhoneStr.length > 1) seenNamesAndPhones.add(namePhoneStr);
+    result.push(item);
+  }
+  return result;
+};
+
 export function AppContent() {
   const { admin, loading: authLoading } = useAuth();
   const [currentView, setCurrentViewState] = useState(() => {
@@ -71,7 +102,7 @@ export function AppContent() {
   const [stats, setStats] = useState(() => getStoredData('aegis_stats', initialStats));
   const [hostels, setHostels] = useState(() => getStoredData('aegis_hostels', initialHostels));
   const [rooms, setRooms] = useState(() => getStoredData('aegis_rooms', initialRooms));
-  const [students, setStudents] = useState(() => getStoredData('aegis_students', []).filter(s => !isDummyStudent(s)));
+  const [students, setStudents] = useState(() => dedupeStudents(getStoredData('aegis_students', []).filter(s => !isDummyStudent(s))));
   const [allocations, setAllocations] = useState(() => getStoredData('aegis_allocations', []).filter(a => !isDummyStudent(a)));
   const [feeSummary, setFeeSummary] = useState(() => getStoredData('aegis_fee_summary', []));
   const [feePayments, setFeePayments] = useState(() => getStoredData('aegis_fee_payments', []));
@@ -173,9 +204,25 @@ export function AppContent() {
         setStudents(prev => {
           const saved = (getStoredData('aegis_students', []) || []).filter(s => !isDummyStudent(s));
           const baseList = fetchedStudents.length > 0 ? fetchedStudents : saved;
-          const baseIds = baseList.map(s => String(s.student_id || s.id));
-          const localOnly = saved.filter(s => !baseIds.includes(String(s.student_id || s.id)));
-          const combined = [...baseList, ...localOnly];
+          const baseIds = new Set(baseList.map(s => String(s.student_id || s.id)));
+          const baseAdmissions = new Set(baseList.map(s => String(s.admission_no || '').toLowerCase()).filter(Boolean));
+          const baseEmails = new Set(baseList.map(s => String(s.email || '').toLowerCase()).filter(Boolean));
+          const baseNamesPhones = new Set(baseList.map(s => `${String(s.full_name || '').trim().toLowerCase()}_${String(s.phone || '').trim()}`).filter(x => x.length > 1));
+
+          const localOnly = saved.filter(s => {
+            const sId = String(s.student_id || s.id);
+            const sAdm = String(s.admission_no || '').toLowerCase();
+            const sEmail = String(s.email || '').toLowerCase();
+            const sNP = `${String(s.full_name || '').trim().toLowerCase()}_${String(s.phone || '').trim()}`;
+
+            if (baseIds.has(sId)) return false;
+            if (sAdm && baseAdmissions.has(sAdm)) return false;
+            if (sEmail && baseEmails.has(sEmail)) return false;
+            if (sNP.length > 1 && baseNamesPhones.has(sNP)) return false;
+            return true;
+          });
+
+          const combined = dedupeStudents([...baseList, ...localOnly]);
           setStoredData('aegis_students', combined);
           return combined;
         });
@@ -264,8 +311,11 @@ export function AppContent() {
     };
 
     setStudents(prev => {
-      const filtered = prev.filter(s => String(s.student_id || s.id) !== String(newSt.id));
-      const updated = [newSt, ...filtered];
+      const filtered = prev.filter(s => 
+        String(s.student_id || s.id) !== String(newSt.id) &&
+        (!newSt.admission_no || String(s.admission_no).toLowerCase() !== String(newSt.admission_no).toLowerCase())
+      );
+      const updated = dedupeStudents([newSt, ...filtered]);
       setStoredData('aegis_students', updated);
       return updated;
     });
@@ -281,7 +331,7 @@ export function AppContent() {
       if (data.success) {
         await fetchAllData();
       }
-      return { success: true, ...data, studentId: newSt.id };
+      return { success: true, ...data, studentId: data.studentId || data.id || newSt.id };
     } catch (err) {
       console.warn('Network error adding student, fallback to local state:', err);
       return { success: true, studentId: newSt.id };
@@ -311,15 +361,31 @@ export function AppContent() {
 
   const handleDeleteStudent = async (id) => {
     if (!window.confirm('Are you sure you want to remove this resident?')) return;
+    const targetStudent = students.find(s => String(s.student_id || s.id) === String(id));
+    const targetAdm = targetStudent ? targetStudent.admission_no : null;
+
+    setStudents(prev => {
+      const updated = prev.filter(s => String(s.student_id || s.id) !== String(id));
+      setStoredData('aegis_students', updated);
+      return updated;
+    });
+
+    setAllocations(prev => {
+      const updated = prev.filter(a => 
+        String(a.student_id) !== String(id) &&
+        (!targetAdm || !a.admission_no || String(a.admission_no).toLowerCase() !== String(targetAdm).toLowerCase())
+      );
+      setStoredData('aegis_allocations', updated);
+      return updated;
+    });
+
     try {
       const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
       const text = await res.text();
       let data = text ? JSON.parse(text) : { success: false };
-      setStudents(prev => prev.filter(s => String(s.student_id || s.id) !== String(id)));
       if (data.success) await fetchAllData();
       return data;
     } catch (err) {
-      setStudents(prev => prev.filter(s => String(s.student_id || s.id) !== String(id)));
       return { success: true };
     }
   };

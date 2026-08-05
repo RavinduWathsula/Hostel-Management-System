@@ -21,12 +21,21 @@ export function DashboardView({
 
   // Calculate live statistics
   const activeResidents = students.filter(s => s.status !== 'Vacated' && s.status !== 'Inactive');
-  const activeAllocationsCount = allocations.filter(a => a.status === 'Active').length;
+  const validAllocations = allocations.filter(a => {
+    if (!a || a.status === 'Vacated' || a.status === 'Inactive') return false;
+    const studentObj = students.find(s => 
+      String(s.student_id || s.id) === String(a.student_id) || 
+      (s.admission_no && a.admission_no && String(s.admission_no).toLowerCase() === String(a.admission_no).toLowerCase())
+    );
+    return Boolean(studentObj && studentObj.status !== 'Vacated' && studentObj.status !== 'Inactive');
+  });
+
+  const activeAllocationsCount = validAllocations.length;
   
   const totalCapacity = rooms.reduce((acc, r) => acc + Number(r.capacity || 0), 0) || 16;
-  const occupiedBeds = activeAllocationsCount || 2;
+  const occupiedBeds = activeAllocationsCount;
   const freeBeds = Math.max(0, totalCapacity - occupiedBeds);
-  const occupancyPercentage = Math.min(100, Math.round((occupiedBeds / totalCapacity) * 100));
+  const occupancyPercentage = totalCapacity > 0 ? Math.min(100, Math.round((occupiedBeds / totalCapacity) * 100)) : 0;
 
   const totalMonthlyRevenue = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0) || stats.monthly_revenue || 23000;
   const pendingComplaintsCount = complaints.filter(c => c.status === 'Pending' || c.status === 'Open' || c.status === 'In Progress').length || stats.pending_complaints || 0;

@@ -9,6 +9,7 @@ export function StudentsView({ students = [], hostels = [], onAddStudent, onEdit
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     admission_no: '',
@@ -65,13 +66,21 @@ export function StudentsView({ students = [], hostels = [], onAddStudent, onEdit
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingStudent) {
-      const stId = editingStudent.student_id || editingStudent.id;
-      await onEditStudent(stId, formData);
-    } else {
-      await onAddStudent(formData);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      if (editingStudent) {
+        const stId = editingStudent.student_id || editingStudent.id;
+        await onEditStudent(stId, formData);
+      } else {
+        await onAddStudent(formData);
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error('Error saving resident:', err);
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsModalOpen(false);
   };
 
   const query = String(searchTerm || '').toLowerCase().trim();
@@ -456,9 +465,12 @@ export function StudentsView({ students = [], hostels = [], onAddStudent, onEdit
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-all"
+              disabled={isSubmitting}
+              className={`px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-all ${
+                isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-500 cursor-pointer'
+              }`}
             >
-              {editingStudent ? 'Save Changes' : 'Register Student'}
+              {isSubmitting ? 'Saving...' : (editingStudent ? 'Save Changes' : 'Register Student')}
             </button>
           </div>
         </form>

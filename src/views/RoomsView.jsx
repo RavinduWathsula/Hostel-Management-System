@@ -16,10 +16,24 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
   const getHostelType = (h) => h.hostel_type || h.gender_type || h.type || 'Girls';
 
   const getRoomId = (r) => r.room_id || r.id;
-  const getRoomCapacity = (r) => Number(r.capacity || 2);
+  const getRoomCapacity = (r) => Number(r.capacity || r.bed_count || 0);
+
+  const getValidAllocationsForRoom = (rId) => {
+    return allocations.filter(a => {
+      if (String(a.room_id) !== String(rId)) return false;
+      const isStatusActive = a.status === 'Active' || !a.status;
+      if (!isStatusActive) return false;
+      const studentObj = students.find(s => 
+        String(s.student_id || s.id) === String(a.student_id) || 
+        (s.admission_no && a.admission_no && String(s.admission_no).toLowerCase() === String(a.admission_no).toLowerCase())
+      );
+      return Boolean(studentObj && studentObj.status !== 'Vacated' && studentObj.status !== 'Inactive');
+    });
+  };
+
   const getRoomOccupied = (r) => {
     const rId = getRoomId(r);
-    return allocations.filter(a => String(a.room_id) === String(rId) && (a.status === 'Active' || !a.status)).length;
+    return getValidAllocationsForRoom(rId).length;
   };
   const getRoomRent = (r) => Number(r.monthly_rent || r.rent || 0);
 
@@ -274,9 +288,9 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
               <div className="space-y-3">
                 {Array.from({ length: getRoomCapacity(selectedRoom) }).map((_, idx) => {
                   const bedNum = idx + 1;
-                  const roomAllocated = allocations.filter(a => String(a.room_id) === String(getRoomId(selectedRoom)) && a.status === 'Active');
-                  const allocation = roomAllocated.find(a => Number(a.bed_number) === bedNum);
-                  const student = allocation ? students.find(s => String(s.student_id || s.id) === String(allocation.student_id)) : null;
+                  const validRoomAllocations = getValidAllocationsForRoom(getRoomId(selectedRoom));
+                  const allocation = validRoomAllocations.find(a => Number(a.bed_number) === bedNum);
+                  const student = allocation ? students.find(s => String(s.student_id || s.id) === String(allocation.student_id) || (s.admission_no && allocation.admission_no && String(s.admission_no).toLowerCase() === String(allocation.admission_no).toLowerCase())) : null;
 
                   return (
                     <div
