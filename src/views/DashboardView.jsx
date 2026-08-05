@@ -55,6 +55,49 @@ export function DashboardView({
     return acc;
   }, {});
 
+  // Prepare recent activity
+  const recentActivities = [];
+  
+  (allocations || []).slice(0, 3).forEach(alloc => {
+    recentActivities.push({
+      id: `alloc-${alloc.id || alloc.allocation_id || Math.random()}`,
+      title: alloc.student_name || 'Resident',
+      description: `Allocated Room ${alloc.room_number || ''} (Bed ${alloc.bed_number || ''})`,
+      time: alloc.allocated_date || 'Recent',
+      iconColor: 'bg-emerald-400',
+      timestamp: new Date(alloc.allocated_date || Date.now()).getTime()
+    });
+  });
+
+  (payments || []).slice(0, 3).forEach(payment => {
+    recentActivities.push({
+      id: `pay-${payment.id || payment.payment_id || Math.random()}`,
+      title: payment.fee_type || 'Fee Payment',
+      description: `Collected ${formatLKR(payment.amount || 0)}`,
+      time: payment.payment_date || 'Verified',
+      iconColor: 'bg-purple-400',
+      timestamp: new Date(payment.payment_date || Date.now()).getTime()
+    });
+  });
+
+  (complaints || []).slice(0, 3).forEach(comp => {
+    recentActivities.push({
+      id: `comp-${comp.id || comp.complaint_id || Math.random()}`,
+      title: comp.student_name || 'Resident',
+      description: `Logged issue: ${comp.title || comp.category || 'Complaint'}`,
+      time: comp.status || 'Pending',
+      iconColor: 'bg-amber-400',
+      timestamp: new Date(comp.created_at || Date.now()).getTime()
+    });
+  });
+
+  recentActivities.sort((a, b) => {
+    if (!isNaN(a.timestamp) && !isNaN(b.timestamp)) return b.timestamp - a.timestamp;
+    return 0;
+  });
+
+  const displayActivities = recentActivities.slice(0, 4);
+
   return (
     <div className="space-y-8 animate-fade-in font-body pb-6">
       {/* HERO WELCOME BANNER */}
@@ -364,32 +407,22 @@ export function DashboardView({
             </div>
 
             <div className="space-y-3">
-              <div className="p-3 bg-dark-input/40 light:bg-slate-50 rounded-xl border border-dark-border light:border-slate-200 flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <div className="text-xs flex-1">
-                  <span className="font-bold text-slate-200 light:text-slate-800 block">Ananya Sharma</span>
-                  <span className="text-slate-400">Allocated Room G-101 (Bed 1)</span>
+              {displayActivities.length > 0 ? (
+                displayActivities.map(activity => (
+                  <div key={activity.id} className="p-3 bg-dark-input/40 light:bg-slate-50 rounded-xl border border-dark-border light:border-slate-200 flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${activity.iconColor} animate-pulse`} />
+                    <div className="text-xs flex-1">
+                      <span className="font-bold text-slate-200 light:text-slate-800 block">{activity.title}</span>
+                      <span className="text-slate-400">{activity.description}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono">{activity.time}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 bg-dark-input/40 light:bg-slate-50 rounded-xl border border-dark-border light:border-slate-200 flex items-center justify-center text-xs text-slate-400">
+                  No recent activity found
                 </div>
-                <span className="text-[10px] text-slate-500 font-mono">Today</span>
-              </div>
-
-              <div className="p-3 bg-dark-input/40 light:bg-slate-50 rounded-xl border border-dark-border light:border-slate-200 flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" />
-                <div className="text-xs flex-1">
-                  <span className="font-bold text-slate-200 light:text-slate-800 block">Dilini Silva</span>
-                  <span className="text-slate-400">Allocated Room G-101 (Bed 2)</span>
-                </div>
-                <span className="text-[10px] text-slate-500 font-mono">Today</span>
-              </div>
-
-              <div className="p-3 bg-dark-input/40 light:bg-slate-50 rounded-xl border border-dark-border light:border-slate-200 flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-                <div className="text-xs flex-1">
-                  <span className="font-bold text-slate-200 light:text-slate-800 block">Monthly Rent Fee</span>
-                  <span className="text-slate-400">Collected LKR 23,000</span>
-                </div>
-                <span className="text-[10px] text-slate-500 font-mono">Verified</span>
-              </div>
+              )}
             </div>
           </div>
         </div>
