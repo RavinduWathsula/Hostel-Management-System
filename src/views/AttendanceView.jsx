@@ -10,7 +10,15 @@ import { StudentSearchSelect } from '../components/common/StudentSearchSelect';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export function AttendanceView({ students = [], onSaveAttendance, onLoadStudentChart }) {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().substring(0, 10));
+  const getLocalDateStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState(getLocalDateStr());
   const [rollcallState, setRollcallState] = useState({});
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [chartDays, setChartDays] = useState(14);
@@ -25,22 +33,31 @@ export function AttendanceView({ students = [], onSaveAttendance, onLoadStudentC
   const fetchAttendanceForDate = async (dateStr) => {
     try {
       const res = await fetch(`/api/attendance/daily?date=${dateStr}`);
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : { success: false };
       const map = {};
       
-      // Default all active students to Present
+      const localStr = localStorage.getItem(`aegis_attendance_${dateStr}`);
+      const localMap = localStr ? JSON.parse(localStr) : {};
+
+      // Default all active students to Present, overlay with DB, then overlay with Local Storage
       students.forEach(st => {
         const studentId = st.id || st.student_id;
-        map[studentId] = 'Present';
+        let stt = 'Present';
+
+        if (data.success && data.records) {
+          const dbRec = data.records.find(r => String(r.student_id) === String(studentId));
+          if (dbRec && dbRec.status) stt = dbRec.status;
+        }
+
+        if (localMap[studentId]) {
+          stt = localMap[studentId];
+        }
+
+        if (stt === 'On Leave') stt = 'Leave';
+        map[studentId] = stt;
       });
 
-      if (data.success && data.records) {
-        data.records.forEach(rec => {
-          let stt = rec.status;
-          if (stt === 'On Leave') stt = 'Leave';
-          map[rec.student_id] = stt;
-        });
-      }
       setRollcallState(map);
     } catch (err) {
       console.error('Error loading daily attendance:', err);
@@ -56,6 +73,14 @@ export function AttendanceView({ students = [], onSaveAttendance, onLoadStudentC
       student_id: Number(stId),
       status: rollcallState[stId] === 'Leave' ? 'On Leave' : rollcallState[stId]
     }));
+    
+    // Save to local storage as source of truth for frontend
+    const localMap = {};
+    payload.forEach(p => {
+      localMap[p.student_id] = p.status === 'On Leave' ? 'Leave' : p.status;
+    });
+    localStorage.setItem(`aegis_attendance_${selectedDate}`, JSON.stringify(localMap));
+
     const res = await onSaveAttendance(selectedDate, payload);
     if (res && res.success) {
       await fetchAttendanceForDate(selectedDate);
@@ -71,10 +96,53 @@ export function AttendanceView({ students = [], onSaveAttendance, onLoadStudentC
       setChartData(null);
       return;
     }
-    const data = await onLoadStudentChart(stId, chartDays);
-    if (data && data.success) {
-      setChartData(data);
+    
+    const dbData = await onLoadStudentChart(stId, chartDays);
+    
+    const dataArray = [];
+    const today = new Date();
+    let presentCount = 0;
+    let absentCount = 0;
+    let leaveCount = 0;
+    let totalMarked = 0;
+
+    for (let i = chartDays - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      
+      let status = 'Not Marked';
+      
+      if (dbData && dbData.success && dbData.data) {
+        const dbRec = dbData.data.find(r => r.date === dateStr);
+        if (dbRec && dbRec.status) status = dbRec.status;
+      }
+      
+      const localStr = localStorage.getItem(`aegis_attendance_${dateStr}`);
+      if (localStr) {
+        const localMap = JSON.parse(localStr);
+        if (localMap[stId]) {
+          status = localMap[stId];
+        }
+      }
+      
+      if (status === 'On Leave') status = 'Leave';
+      dataArray.push({ date: dateStr, status });
+      
+      totalMarked++;
+      if (status === 'Present') presentCount++;
+      if (status === 'Absent') absentCount++;
+      if (status === 'Leave') leaveCount++;
     }
+    
+    const attendanceRate = totalMarked > 0 ? Math.round((presentCount / totalMarked) * 100) : 0;
+    
+    setChartData({
+      success: true,
+      student: students.find(s => String(s.id || s.student_id) === String(stId)),
+      summary: { totalMarked, totalPresent: presentCount, totalAbsent: absentCount, totalLeave: leaveCount, attendanceRate },
+      data: dataArray
+    });
   };
 
   useEffect(() => {
