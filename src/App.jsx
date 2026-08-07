@@ -153,7 +153,7 @@ export function AppContent() {
 
   const safeFetchJson = async (url) => {
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       const res = await fetch(url, { headers });
       const text = await res.text();
@@ -441,7 +441,7 @@ export function AppContent() {
     });
 
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const res = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 
@@ -464,7 +464,7 @@ export function AppContent() {
 
   const handleAddHostel = async (hostelData) => {
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const res = await fetch('/api/hostels', {
         method: 'POST',
         headers: { 
@@ -513,7 +513,7 @@ export function AppContent() {
     });
 
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const res = await fetch('/api/allocations', {
         method: 'POST',
         headers: { 
@@ -543,7 +543,7 @@ export function AppContent() {
     });
 
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const res = await fetch(`/api/rooms/${roomId}`, { 
         method: 'DELETE',
         headers: {
@@ -575,7 +575,7 @@ export function AppContent() {
     });
 
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const res = await fetch(`/api/rooms/${roomId}`, {
         method: 'PUT',
         headers: { 
@@ -610,7 +610,7 @@ export function AppContent() {
     });
 
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const res = await fetch('/api/allocations/vacate', {
         method: 'POST',
         headers: { 
@@ -652,7 +652,7 @@ export function AppContent() {
     });
 
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const res = await fetch('/api/allocations/change-bed', {
         method: 'POST',
         headers: { 
@@ -890,7 +890,7 @@ export function AppContent() {
     });
 
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const res = await fetch('/api/leaves', {
         method: 'POST',
         headers: { 
@@ -919,7 +919,7 @@ export function AppContent() {
     });
 
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const res = await fetch(`/api/leaves/${id}/status`, {
         method: 'PUT',
         headers: { 
@@ -963,7 +963,7 @@ export function AppContent() {
 
   const handleCheckoutVisitor = async (id) => {
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const res = await fetch(`/api/visitors/${id}/checkout`, { 
         method: 'PUT',
         headers: {
@@ -989,7 +989,7 @@ export function AppContent() {
   // Attendance Handlers
   const handleSaveAttendance = async (date, records) => {
     try {
-      const token = localStorage.getItem('aegis_token');
+      const token = sessionStorage.getItem('aegis_token');
       const res = await fetch('/api/attendance/daily', {
         method: 'POST',
         headers: { 

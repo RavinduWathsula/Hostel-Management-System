@@ -21,23 +21,12 @@ export function AuthProvider({ children }) {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('aegis_token');
-      const savedUserStr = localStorage.getItem('aegis_user');
+      const token = sessionStorage.getItem('aegis_token');
+      const savedUserStr = sessionStorage.getItem('aegis_user');
       if (!token) {
         setAdmin(null);
         setLoading(false);
         return;
-      }
-
-      if (savedUserStr) {
-        try {
-          const userObj = JSON.parse(savedUserStr);
-          if (userObj) {
-            setAdmin(userObj);
-            setLoading(false);
-            return;
-          }
-        } catch (e) {}
       }
 
       try {
@@ -49,22 +38,17 @@ export function AuthProvider({ children }) {
           if (data.success && (data.user || data.admin)) {
             const userObj = data.user || data.admin;
             setAdmin(userObj);
-            localStorage.setItem('aegis_user', JSON.stringify(userObj));
+            sessionStorage.setItem('aegis_user', JSON.stringify(userObj));
             setLoading(false);
             return;
           }
         }
       } catch (e) {}
 
-      const fallbackUser = {
-        admin_id: 1,
-        full_name: 'System Warden Admin',
-        username: 'admin',
-        email: 'admin@aegis.com',
-        role: 'Super Admin'
-      };
-      setAdmin(fallbackUser);
-      localStorage.setItem('aegis_user', JSON.stringify(fallbackUser));
+      // If token verification fails, clear the invalid session
+      sessionStorage.removeItem('aegis_token');
+      sessionStorage.removeItem('aegis_user');
+      setAdmin(null);
     } catch (err) {
       console.error('Auth check error:', err);
       setAdmin(null);
@@ -91,8 +75,8 @@ export function AuthProvider({ children }) {
           role: 'Super Admin'
         };
         const token = safeEncodeBase64(JSON.stringify({ id: user.admin_id, username: user.username, email: user.email, time: Date.now() }));
-        localStorage.setItem('aegis_token', token);
-        localStorage.setItem('aegis_user', JSON.stringify(user));
+        sessionStorage.setItem('aegis_token', token);
+        sessionStorage.setItem('aegis_user', JSON.stringify(user));
         setAdmin(user);
         return { success: true, user, token };
       }
@@ -117,8 +101,8 @@ export function AuthProvider({ children }) {
           role: 'Super Admin'
         };
         const token = safeEncodeBase64(JSON.stringify({ id: user.admin_id, username: user.username, email: user.email, time: Date.now() }));
-        localStorage.setItem('aegis_token', token);
-        localStorage.setItem('aegis_user', JSON.stringify(user));
+        sessionStorage.setItem('aegis_token', token);
+        sessionStorage.setItem('aegis_user', JSON.stringify(user));
         setAdmin(user);
         return { success: true, user, token };
       }
@@ -128,9 +112,9 @@ export function AuthProvider({ children }) {
     const userData = data.user || data.admin;
     setAdmin(userData);
     if (data.token) {
-      localStorage.setItem('aegis_token', data.token);
+      sessionStorage.setItem('aegis_token', data.token);
     }
-    localStorage.setItem('aegis_user', JSON.stringify(userData));
+    sessionStorage.setItem('aegis_user', JSON.stringify(userData));
     return data;
   };
 
@@ -161,15 +145,15 @@ export function AuthProvider({ children }) {
     const userData = data.user || data.admin;
     setAdmin(userData);
     if (data.token) {
-      localStorage.setItem('aegis_token', data.token);
+      sessionStorage.setItem('aegis_token', data.token);
     }
-    localStorage.setItem('aegis_user', JSON.stringify(userData));
+    sessionStorage.setItem('aegis_user', JSON.stringify(userData));
     return data;
   };
 
   const logout = () => {
-    localStorage.removeItem('aegis_token');
-    localStorage.removeItem('aegis_user');
+    sessionStorage.removeItem('aegis_token');
+    sessionStorage.removeItem('aegis_user');
     localStorage.removeItem('aegis_current_view');
     setAdmin(null);
   };
