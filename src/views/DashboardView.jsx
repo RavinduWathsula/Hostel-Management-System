@@ -242,7 +242,7 @@ export function DashboardView({
             <div className="space-y-3">
               <div className="flex justify-between items-center text-sm font-semibold">
                 <span className="text-slate-200 light:text-slate-800 font-bold flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-pink-400 fill-pink-400" /> Aegis Girls Hostel Block
+                  Aegis Girls Hostel Block
                 </span>
                 <span className="text-purple-400 font-extrabold font-mono text-base">
                   {occupiedBeds} / {totalCapacity} Beds ({occupancyPercentage}%)
