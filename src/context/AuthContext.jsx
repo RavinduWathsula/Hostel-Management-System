@@ -29,6 +29,20 @@ export function AuthProvider({ children }) {
         return;
       }
 
+      const tryFallback = () => {
+        if (savedUserStr) {
+          try {
+            const savedUser = JSON.parse(savedUserStr);
+            if (savedUser) {
+              setAdmin(savedUser);
+              setLoading(false);
+              return true;
+            }
+          } catch (err) {}
+        }
+        return false;
+      };
+
       try {
         const res = await fetch('/api/auth/me', {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -43,9 +57,16 @@ export function AuthProvider({ children }) {
             return;
           }
         }
-      } catch (e) {}
+        
+        // If response is not ok (e.g. 404 from mock server) but token exists, try fallback
+        if (tryFallback()) return;
 
-      // If token verification fails, clear the invalid session
+      } catch (e) {
+        // Network error - use fallback
+        if (tryFallback()) return;
+      }
+
+      // If token verification fails and no fallback, clear the invalid session
       sessionStorage.removeItem('aegis_token');
       sessionStorage.removeItem('aegis_user');
       setAdmin(null);
