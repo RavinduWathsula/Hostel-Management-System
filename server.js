@@ -1260,6 +1260,10 @@ app.get('/api/leaves', async (req, res) => {
       await db.query("ALTER TABLE leave_application ADD COLUMN emergency_contact VARCHAR(50)");
     } catch (e) {}
 
+    try {
+      await db.query("ALTER TABLE leave_application ADD COLUMN actual_return_date DATE DEFAULT NULL");
+    } catch (e) {}
+
     const [rows] = await db.query(`
       SELECT l.*, l.leave_id as id, s.full_name as student_name, s.admission_no, st.full_name as approved_by_name
       FROM leave_application l
@@ -1395,6 +1399,25 @@ const handleUpdateLeaveStatusServer = async (req, res) => {
 };
 app.put('/api/leaves/:id/status', handleUpdateLeaveStatusServer);
 app.put('/leaves/:id/status', handleUpdateLeaveStatusServer);
+
+const handleUpdateLeaveDateServer = async (req, res) => {
+  const { id } = req.params;
+  const { actual_return_date } = req.body;
+  if (!actual_return_date) return res.status(400).json({ success: false, error: 'Actual return date is required' });
+
+  try {
+    await db.query("UPDATE leave_application SET actual_return_date = ? WHERE leave_id = ?", [actual_return_date, id]);
+    const lIdx = memoryStore.leaves.findIndex(l => String(l.leave_id) === String(id) || String(l.id) === String(id));
+    if (lIdx !== -1) memoryStore.leaves[lIdx].actual_return_date = actual_return_date;
+    res.json({ success: true, message: 'Actual return date updated successfully' });
+  } catch (error) {
+    const lIdx = memoryStore.leaves.findIndex(l => String(l.leave_id) === String(id) || String(l.id) === String(id));
+    if (lIdx !== -1) memoryStore.leaves[lIdx].actual_return_date = actual_return_date;
+    res.json({ success: true, message: 'Actual return date updated successfully' });
+  }
+};
+app.put('/api/leaves/:id', handleUpdateLeaveDateServer);
+app.put('/leaves/:id', handleUpdateLeaveDateServer);
 
 // ==========================================
 // 9. ATTENDANCE API

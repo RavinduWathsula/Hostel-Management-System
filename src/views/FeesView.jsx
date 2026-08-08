@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { CreditCard, Plus, Receipt, Wallet, Search, CheckCircle, AlertCircle, Filter, Calendar } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 import { KpiCard } from '../components/common/KpiCard';
+import { StudentSearchSelect } from '../components/common/StudentSearchSelect';
 
 export function FeesView({ feeSummary = [], feePayments = [], students = [], onRecordFee, searchTerm = '' }) {
   const [activeTab, setActiveTab] = useState('payments'); // 'payments' | 'dues'
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFeeType, setSelectedFeeType] = useState('ALL');
   const [selectedMonth, setSelectedMonth] = useState('ALL');
@@ -29,7 +31,7 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
   const totalDue = feeSummary.reduce((acc, s) => acc + Number(s.total_due || 0), 0);
 
   const handleOpenModal = (studentId = '') => {
-    const defaultStudentId = studentId || (students.length > 0 ? (students[0].student_id || students[0].id) : '');
+    const defaultStudentId = studentId && typeof studentId === 'string' ? studentId : '';
     setFormData({
       student_id: defaultStudentId,
       fee_type: 'Hostel Fee',
@@ -45,17 +47,25 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const targetStudentId = formData.student_id || (students.length > 0 ? (students[0].student_id || students[0].id) : '');
+    if (isSubmitting) return;
+    
+    const targetStudentId = formData.student_id;
     if (!targetStudentId || !formData.amount) {
       alert('Please select a resident student and enter a valid amount.');
       return;
     }
-    const payload = {
-      ...formData,
-      student_id: targetStudentId
-    };
-    await onRecordFee(payload);
-    setIsModalOpen(false);
+    
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        ...formData,
+        student_id: targetStudentId
+      };
+      await onRecordFee(payload);
+      setIsModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const effectiveSearch = (searchTerm || searchQuery).toLowerCase().trim();
@@ -366,19 +376,13 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
             <label className="block text-xs font-bold uppercase text-slate-400 light:text-slate-600 mb-1">
               Student <span className="text-rose-500">*</span>
             </label>
-            <select
-              required
+            <StudentSearchSelect
+              students={students}
               value={formData.student_id}
-              onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-              className="w-full px-3 py-2 bg-dark-input light:bg-slate-50 border border-dark-border light:border-slate-300 rounded-xl text-sm text-slate-100 light:text-slate-900 focus:outline-none focus:border-blue-500"
-            >
-              <option value="">-- Choose Student --</option>
-              {students.map(st => (
-                <option key={st.student_id || st.id} value={st.student_id || st.id}>
-                  {st.full_name} ({st.admission_no || `ID: ${st.student_id || st.id}`})
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFormData({ ...formData, student_id: val })}
+              placeholder="-- Choose Student --"
+              required={true}
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -482,9 +486,12 @@ export function FeesView({ feeSummary = [], feePayments = [], students = [], onR
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-500/20"
+              disabled={isSubmitting}
+              className={`px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-all ${
+                isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-500'
+              }`}
             >
-              Log Payment
+              {isSubmitting ? 'Logging...' : 'Log Payment'}
             </button>
           </div>
         </form>

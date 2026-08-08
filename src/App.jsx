@@ -940,6 +940,35 @@ export function AppContent() {
     }
   };
 
+  const handleUpdateLeaveDate = async (id, actual_return_date) => {
+    setLeaves(prev => {
+      const updated = prev.map(l => (String(l.id || l.leave_id) === String(id) ? { ...l, actual_return_date } : l));
+      setStoredData('aegis_leaves', updated);
+      return updated;
+    });
+
+    try {
+      const token = sessionStorage.getItem('aegis_token');
+      const res = await fetch(`/api/leaves/${id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ actual_return_date })
+      });
+      const text = await res.text();
+      let data = text ? JSON.parse(text) : { success: false };
+      if (data.success) {
+        await fetchAllData();
+      }
+      return { success: true, ...data };
+    } catch (err) {
+      console.warn('Network error updating leave date, fallback to local state:', err);
+      return { success: true };
+    }
+  };
+
   // Visitor Handlers
   const handleLogVisitor = async (visitorData) => {
     try {
@@ -1162,6 +1191,7 @@ export function AppContent() {
               searchTerm={globalSearch}
               onRequestLeave={handleRequestLeave}
               onUpdateLeaveStatus={handleUpdateLeaveStatus}
+              onUpdateLeaveDate={handleUpdateLeaveDate}
             />
           )}
 

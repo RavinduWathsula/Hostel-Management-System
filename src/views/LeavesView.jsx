@@ -7,12 +7,25 @@ import {
 import { Modal } from '../components/common/Modal';
 import { StudentSearchSelect } from '../components/common/StudentSearchSelect';
 
-export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdateLeaveStatus, searchTerm = '' }) {
+export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdateLeaveStatus, onUpdateLeaveDate, searchTerm = '' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState('All');
   const [localSearch, setLocalSearch] = useState('');
+  const [editingDateId, setEditingDateId] = useState(null);
+  const [editDateValue, setEditDateValue] = useState('');
   
   const todayStr = new Date().toLocaleDateString('sv');
+
+  const getLocalDateString = (dateVal) => {
+    if (!dateVal) return '';
+    if (typeof dateVal === 'string' && dateVal.length === 10) return dateVal;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
 
   // Stats calculation
   const totalCount = leaves.length;
@@ -267,7 +280,7 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
                 <th className="px-5 py-3.5">Reason</th>
                 <th className="px-5 py-3.5 whitespace-nowrap">Emergency Contact</th>
                 <th className="px-5 py-3.5">Status</th>
-                <th className="px-5 py-3.5 text-right">Actions</th>
+                <th className="px-5 py-3.5 text-right">Return / Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border/60 light:divide-slate-200">
@@ -290,6 +303,14 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
               ) : (
                 filteredLeaves.map(l => {
                   const durationStr = calculateDays(l.from_date, l.to_date);
+                  let extraDays = 0;
+                  if (l.actual_return_date) {
+                    const expected = new Date(l.to_date);
+                    const actual = new Date(l.actual_return_date);
+                    if (actual > expected) {
+                      extraDays = Math.ceil((actual.getTime() - expected.getTime()) / (1000 * 60 * 60 * 24));
+                    }
+                  }
                   return (
                     <tr key={l.id || l.leave_id} className="hover:bg-dark-hover/50 light:hover:bg-slate-50/80 transition-colors group">
                       <td className="px-5 py-4">
@@ -309,17 +330,26 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
                       </td>
 
                       <td className="px-5 py-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-1.5 text-slate-200 light:text-slate-800 font-medium text-xs">
-                            <span>{l.from_date?.substring(0, 10)}</span>
-                            <ArrowRight className="w-3 h-3 text-blue-400 shrink-0" />
-                            <span>{l.to_date?.substring(0, 10)}</span>
+                        <div className="inline-flex flex-col items-start gap-1.5">
+                          <div className="flex items-center gap-2 bg-slate-800/60 light:bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-700/50 light:border-slate-200 shadow-sm transition-all hover:bg-slate-800 light:hover:bg-slate-200">
+                            <span className="font-mono text-[11px] font-semibold text-slate-300 light:text-slate-700">{getLocalDateString(l.from_date)}</span>
+                            <div className="bg-blue-500/10 p-0.5 rounded-md text-blue-400">
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="font-mono text-[11px] font-semibold text-slate-300 light:text-slate-700">{getLocalDateString(l.to_date)}</span>
                           </div>
-                          {durationStr && (
-                            <span className="text-[10px] text-slate-400 light:text-slate-500 mt-0.5">
-                              {durationStr}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {durationStr && (
+                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">
+                                {durationStr}
+                              </div>
+                            )}
+                            {extraDays > 0 && (
+                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                                +{extraDays} Late {extraDays === 1 ? 'Day' : 'Days'}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
 
@@ -386,8 +416,61 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
                               <X className="w-3.5 h-3.5" /> Reject
                             </button>
                           </div>
+                        ) : editingDateId === (l.id || l.leave_id) ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <input
+                              type="date"
+                              value={editDateValue}
+                              onChange={(e) => setEditDateValue(e.target.value)}
+                              className="px-2 py-1.5 bg-slate-800 light:bg-slate-100 border border-slate-700 light:border-slate-300 rounded-lg text-xs text-slate-200 light:text-slate-800 focus:outline-none focus:border-blue-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const leaveId = l.id || l.leave_id;
+                                if (onUpdateLeaveDate && leaveId && editDateValue) {
+                                  await onUpdateLeaveDate(leaveId, editDateValue);
+                                }
+                                setEditingDateId(null);
+                              }}
+                              className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingDateId(null);
+                              }}
+                              className="p-1.5 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
                         ) : (
-                          <span className="text-xs text-slate-500">Completed</span>
+                          <div className="flex justify-end">
+                            <div 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingDateId(l.id || l.leave_id);
+                                setEditDateValue(getLocalDateString(l.actual_return_date || l.to_date));
+                              }}
+                              className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600/10 to-indigo-600/10 border border-blue-500/20 text-blue-400 shadow-sm transition-all hover:bg-blue-500/20 cursor-pointer group"
+                              title="Click to edit return date"
+                            >
+                              <div className="bg-blue-500/20 p-1.5 rounded-lg group-hover:bg-blue-500/30 transition-colors">
+                                <CalendarDays className="w-4 h-4 text-blue-400" />
+                              </div>
+                              <div className="flex flex-col items-start text-left">
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-blue-400/80 leading-none mb-0.5">Returns On</span>
+                                <span className="text-xs font-semibold leading-none text-blue-300 light:text-blue-700">
+                                  {new Date(getLocalDateString(l.actual_return_date || l.to_date) + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </td>
                     </tr>
