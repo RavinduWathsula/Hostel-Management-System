@@ -1001,14 +1001,10 @@ export function AppContent() {
       const text = await res.text();
       let data = text ? JSON.parse(text) : { success: false };
       if (data.success) {
-        alert('Daily rollcall saved successfully!');
         fetchAllData();
-      } else {
-        alert(data.error || 'Failed to save attendance rollcall');
       }
       return data;
     } catch (err) {
-      alert('Error saving rollcall: ' + err.message);
       return { success: false, error: err.message };
     }
   };

@@ -24,6 +24,7 @@ export function AttendanceView({ students = [], onSaveAttendance, onLoadStudentC
   const [chartDays, setChartDays] = useState(14);
   const [chartData, setChartData] = useState(null);
   const [rollcallSearch, setRollcallSearch] = useState('');
+  const [toastMsg, setToastMsg] = useState(null);
 
   // Fetch attendance for selected date
   useEffect(() => {
@@ -87,6 +88,11 @@ export function AttendanceView({ students = [], onSaveAttendance, onLoadStudentC
       if (selectedStudentId) {
         handleSelectStudentForChart(selectedStudentId);
       }
+      setToastMsg({ type: 'success', text: 'Daily rollcall successfully verified and saved! ✨' });
+      setTimeout(() => setToastMsg(null), 3000);
+    } else {
+      setToastMsg({ type: 'error', text: res?.error || 'Failed to save attendance records.' });
+      setTimeout(() => setToastMsg(null), 3000);
     }
   };
 
@@ -515,6 +521,29 @@ export function AttendanceView({ students = [], onSaveAttendance, onLoadStudentC
           )}
         </div>
       </div>
+
+      {/* Creative Toast Notification Overlay */}
+      {toastMsg && (
+        <div className="fixed bottom-8 right-8 z-50 animate-fade-in" style={{ animationDuration: '0.3s' }}>
+          <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl shadow-2xl border ${
+            toastMsg.type === 'success' 
+              ? 'bg-slate-900/95 border-emerald-500/50 shadow-emerald-500/20 backdrop-blur-xl'
+              : 'bg-slate-900/95 border-rose-500/50 shadow-rose-500/20 backdrop-blur-xl'
+          }`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              toastMsg.type === 'success' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+            }`}>
+              {toastMsg.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+            </div>
+            <div>
+              <h4 className="text-sm font-extrabold text-slate-100">{toastMsg.type === 'success' ? 'Rollcall Saved' : 'Update Failed'}</h4>
+              <p className={`text-xs font-semibold ${toastMsg.type === 'success' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {toastMsg.text}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

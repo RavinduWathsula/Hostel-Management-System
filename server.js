@@ -1455,12 +1455,19 @@ app.get('/api/attendance/student/:id', async (req, res) => {
       success: true,
       student: studentRows[0] || null,
       summary: { totalMarked, totalPresent, totalAbsent, totalLeave, attendanceRate, days: numDays },
-      data: rows.map(r => ({
-        date: r.date_val instanceof Date 
-          ? r.date_val.toISOString().split('T')[0] 
-          : r.date_val,
-        status: r.status
-      }))
+      data: rows.map(r => {
+        let dateStr = r.date_val;
+        if (r.date_val instanceof Date) {
+          const yyyy = r.date_val.getFullYear();
+          const mm = String(r.date_val.getMonth() + 1).padStart(2, '0');
+          const dd = String(r.date_val.getDate()).padStart(2, '0');
+          dateStr = `${yyyy}-${mm}-${dd}`;
+        }
+        return {
+          date: dateStr,
+          status: r.status
+        };
+      })
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
