@@ -44,7 +44,7 @@ export function AttendanceView({ students = [], onSaveAttendance, onLoadStudentC
       // Default all active students to Present, overlay with DB, then overlay with Local Storage
       students.forEach(st => {
         const studentId = st.id || st.student_id;
-        let stt = 'Present';
+        let stt = null;
 
         if (data.success && data.records) {
           const dbRec = data.records.find(r => String(r.student_id) === String(studentId));
@@ -70,10 +70,12 @@ export function AttendanceView({ students = [], onSaveAttendance, onLoadStudentC
   };
 
   const handleSave = async () => {
-    const payload = Object.keys(rollcallState).map(stId => ({
-      student_id: Number(stId),
-      status: rollcallState[stId] === 'Leave' ? 'On Leave' : rollcallState[stId]
-    }));
+    const payload = Object.keys(rollcallState)
+      .filter(stId => rollcallState[stId] !== null)
+      .map(stId => ({
+        student_id: Number(stId),
+        status: rollcallState[stId] === 'Leave' ? 'On Leave' : rollcallState[stId]
+      }));
     
     // Save to local storage as source of truth for frontend
     const localMap = {};
@@ -321,7 +323,7 @@ export function AttendanceView({ students = [], onSaveAttendance, onLoadStudentC
                 ) : (
                   filteredStudents.map(st => {
                     const studentId = st.id || st.student_id;
-                    const currentStatus = rollcallState[studentId] || 'Present';
+                    const currentStatus = rollcallState[studentId] || null;
                     return (
                       <tr key={studentId} className="hover:bg-slate-800/40 light:hover:bg-slate-50 transition-colors">
                         <td className="px-5 py-3">

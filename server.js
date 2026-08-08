@@ -1504,7 +1504,7 @@ const handleGetAttendance = async (req, res) => {
 
     const [rows] = await db.query(`
       SELECT s.student_id, s.student_id as id, s.full_name, s.admission_no, 
-             a.attendance_id, COALESCE(a.status, 'Present') as status, a.attendance_date,
+             a.attendance_id, a.status as status, a.attendance_date,
              st.full_name as marked_by_name
       FROM student s
       LEFT JOIN attendance a ON s.student_id = a.student_id AND a.attendance_date = ?
