@@ -634,19 +634,27 @@ export function AppContent() {
   const handleChangeBed = async (allocationId, newRoomId, newBedNumber) => {
     const targetRoom = rooms.find(r => String(r.room_id || r.id) === String(newRoomId));
     setAllocations(prev => {
-      const updated = prev.map(a => {
-        if (String(a.allocation_id || a.id) === String(allocationId)) {
-          return {
-            ...a,
-            room_id: Number(newRoomId),
-            room_number: targetRoom ? targetRoom.room_number : a.room_number,
-            hostel_id: targetRoom ? targetRoom.hostel_id : a.hostel_id,
-            hostel_name: targetRoom ? targetRoom.hostel_name : a.hostel_name,
-            bed_number: Number(newBedNumber)
-          };
-        }
-        return a;
-      });
+      // Find the specific allocation we are changing to get its student_id
+      const targetAlloc = prev.find(a => String(a.allocation_id || a.id) === String(allocationId));
+      if (!targetAlloc) return prev;
+      
+      const stId = String(targetAlloc.student_id);
+
+      // Create the updated allocation
+      const updatedAlloc = {
+        ...targetAlloc,
+        room_id: Number(newRoomId),
+        room_number: targetRoom ? targetRoom.room_number : targetAlloc.room_number,
+        hostel_id: targetRoom ? targetRoom.hostel_id : targetAlloc.hostel_id,
+        hostel_name: targetRoom ? targetRoom.hostel_name : targetAlloc.hostel_name,
+        bed_number: Number(newBedNumber)
+      };
+
+      // Filter out ANY allocations for this student (removing duplicates and the old one)
+      const filtered = prev.filter(a => String(a.student_id) !== stId);
+      
+      // Add the updated allocation back
+      const updated = [updatedAlloc, ...filtered];
       setStoredData('aegis_allocations', updated);
       return updated;
     });

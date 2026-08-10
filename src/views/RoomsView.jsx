@@ -224,8 +224,8 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                     {Array.from({ length: capacity }).map((_, idx) => {
                       const bedNum = idx + 1;
                       const validAllocations = getValidAllocationsForRoom(roomId);
-                      const isOccupied = validAllocations.some(a => Number(a.bed_number) === bedNum) || (idx < validAllocations.length);
-                      const occupant = validAllocations.find(a => Number(a.bed_number) === bedNum) || validAllocations[idx];
+                      const isOccupied = validAllocations.some(a => Number(a.bed_number) === bedNum);
+                      const occupant = validAllocations.find(a => Number(a.bed_number) === bedNum);
                       const occupantName = occupant ? (occupant.student_name || 'Occupied') : null;
                       return (
                         <div
@@ -366,6 +366,20 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                                 const currentRoomNum = selectedRoom.room_number;
                                 const firstTargetRoom = rooms.find(r => String(getRoomId(r)) !== String(currentRId)) || rooms[0];
                                 const targetRId = firstTargetRoom ? getRoomId(firstTargetRoom) : '';
+                                
+                                let firstFreeBed = 1;
+                                if (firstTargetRoom) {
+                                  const cap = getRoomCapacity(firstTargetRoom);
+                                  const targetOccupiedBeds = getValidAllocationsForRoom(targetRId)
+                                    .map(a => Number(a.bed_number));
+                                  for (let b = 1; b <= cap; b++) {
+                                    if (!targetOccupiedBeds.includes(b)) {
+                                      firstFreeBed = b;
+                                      break;
+                                    }
+                                  }
+                                }
+                                
                                 setSelectedRoom(null);
                                 setChangeBedModal({
                                   allocation_id: allocation.allocation_id || allocation.id,
@@ -373,7 +387,7 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                                   current_room: currentRoomNum,
                                   current_bed: bedNum,
                                   new_room_id: targetRId,
-                                  new_bed_number: 1
+                                  new_bed_number: firstFreeBed
                                 });
                               }}
                               className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border border-purple-500/30 flex items-center gap-1.5 transition-all"
@@ -613,8 +627,7 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
       {changeBedModal && (() => {
         const selectedTargetRoom = rooms.find(r => String(getRoomId(r)) === String(changeBedModal.new_room_id)) || rooms[0];
         const targetCapacity = selectedTargetRoom ? getRoomCapacity(selectedTargetRoom) : 2;
-        const occupiedBedsInTargetRoom = allocations
-          .filter(a => String(a.room_id) === String(changeBedModal.new_room_id) && a.status === 'Active')
+        const occupiedBedsInTargetRoom = getValidAllocationsForRoom(changeBedModal.new_room_id)
           .map(a => Number(a.bed_number));
 
         return (
@@ -652,8 +665,7 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                     const selectedId = e.target.value;
                     const targetRoom = rooms.find(r => String(getRoomId(r)) === String(selectedId));
                     const cap = targetRoom ? getRoomCapacity(targetRoom) : 2;
-                    const targetOccupiedBeds = allocations
-                      .filter(a => String(a.room_id) === String(selectedId) && a.status === 'Active')
+                    const targetOccupiedBeds = getValidAllocationsForRoom(selectedId)
                       .map(a => Number(a.bed_number));
                     
                     let firstFree = 1;
@@ -694,7 +706,7 @@ export function RoomsView({ hostels = [], rooms = [], students = [], allocations
                 >
                   {Array.from({ length: targetCapacity }, (_, i) => i + 1).map(b => {
                     const isOccupied = occupiedBedsInTargetRoom.includes(b);
-                    const occupyingAlloc = allocations.find(a => String(a.room_id) === String(changeBedModal.new_room_id) && Number(a.bed_number) === b && a.status === 'Active');
+                    const occupyingAlloc = getValidAllocationsForRoom(changeBedModal.new_room_id).find(a => Number(a.bed_number) === b);
                     const occupantName = occupyingAlloc ? (occupyingAlloc.student_name || 'Occupied') : null;
                     return (
                       <option key={b} value={b} disabled={isOccupied}>

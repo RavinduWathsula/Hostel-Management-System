@@ -126,6 +126,7 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
         </div>
 
         <button
+          type="button"
           onClick={handleOpenModal}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 h-11 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
         >
@@ -228,6 +229,7 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
             { id: 'Rejected', label: 'Rejected', count: rejectedCount }
           ].map(tab => (
             <button
+              type="button"
               key={tab.id}
               onClick={() => setStatusFilter(tab.id)}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
@@ -260,6 +262,7 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
           />
           {localSearch && (
             <button
+              type="button"
               onClick={() => setLocalSearch('')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-0.5"
             >
@@ -466,7 +469,12 @@ export function LeavesView({ leaves = [], students = [], onRequestLeave, onUpdat
                               <div className="flex flex-col items-start text-left">
                                 <span className="text-[9px] font-bold uppercase tracking-widest text-blue-400/80 leading-none mb-0.5">Returns On</span>
                                 <span className="text-xs font-semibold leading-none text-blue-300 light:text-blue-700">
-                                  {new Date(getLocalDateString(l.actual_return_date || l.to_date) + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                  {(() => {
+                                    const dateStr = getLocalDateString(l.actual_return_date || l.to_date);
+                                    if (!dateStr) return 'TBD';
+                                    const d = new Date(dateStr + 'T12:00:00');
+                                    return isNaN(d.getTime()) ? 'Invalid Date' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                                  })()}
                                 </span>
                               </div>
                             </div>
