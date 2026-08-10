@@ -123,9 +123,9 @@ export function AppContent() {
 
   const isDummyStudent = (s) => {
     if (!s) return false;
-    const adm = String(s.admission_no || '');
     const name = String(s.full_name || s.student_name || '');
-    return adm.startsWith('STU2026') || name.includes('Kaveesha') || name.includes('Ananya') || name.includes('Tharushi') || name.includes('Dilini') || name.includes('Kasun') || name.includes('Ruwan');
+    // Removed the check for 'STU' admission prefixes since new students generated in the app use this prefix
+    return name.includes('Kaveesha') || name.includes('Ananya') || name.includes('Tharushi') || name.includes('Dilini') || name.includes('Kasun') || name.includes('Ruwan');
   };
 
   // Application Data States initialized with LocalStorage or Initial Seed Data
