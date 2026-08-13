@@ -115,12 +115,12 @@ export function BookingsView({ bookings = [], onApplyBooking, searchTerm = '' })
                     <td className="px-6 py-4 font-semibold text-slate-100 light:text-slate-900">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center font-bold text-xs">
-                          {b.applicant_name.charAt(0).toUpperCase()}
+                          {(b.applicant_name || '?').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div>{b.applicant_name}</div>
+                          <div>{b.applicant_name || 'Unknown'}</div>
                           <div className="text-[10px] text-slate-400 light:text-slate-500 font-normal uppercase tracking-wider">
-                            {b.gender}
+                            {b.gender || 'Unknown'}
                           </div>
                         </div>
                       </div>

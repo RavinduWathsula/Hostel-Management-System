@@ -7,7 +7,6 @@ import { DashboardView } from './views/DashboardView';
 import { RoomsView } from './views/RoomsView';
 import { StudentsView } from './views/StudentsView';
 import { AllocationsView } from './views/AllocationsView';
-import { BookingsView } from './views/BookingsView';
 import { FeesView } from './views/FeesView';
 import { ComplaintsView } from './views/ComplaintsView';
 import { StaffView } from './views/StaffView';
@@ -1170,14 +1169,6 @@ export function AppContent() {
               rooms={rooms}
               searchTerm={globalSearch}
               onAllocateRoom={handleAllocateRoom}
-            />
-          )}
-
-          {currentView === 'bookings' && (
-            <BookingsView
-              bookings={bookings}
-              onApplyBooking={handleApplyBooking}
-              searchTerm={globalSearch}
             />
           )}
 

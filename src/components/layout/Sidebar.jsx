@@ -28,7 +28,6 @@ export function Sidebar({ currentView, setCurrentView = () => {}, counts = {}, m
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'rooms', label: 'Hostels & Rooms', icon: Building2 },
-    { id: 'bookings', label: 'Room Bookings', icon: Bookmark },
     { id: 'students', label: 'Student Directory', icon: Users },
     { id: 'allocations', label: 'Room Allocations', icon: KeyRound },
     { id: 'fees', label: 'Fee Management', icon: CreditCard },
