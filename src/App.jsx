@@ -7,6 +7,7 @@ import { DashboardView } from './views/DashboardView';
 import { RoomsView } from './views/RoomsView';
 import { StudentsView } from './views/StudentsView';
 import { AllocationsView } from './views/AllocationsView';
+import { BookingsView } from './views/BookingsView';
 import { FeesView } from './views/FeesView';
 import { ComplaintsView } from './views/ComplaintsView';
 import { StaffView } from './views/StaffView';
@@ -134,6 +135,7 @@ export function AppContent() {
   const [rooms, setRooms] = useState(() => getStoredData('aegis_rooms', initialRooms));
   const [students, setStudents] = useState(() => dedupeStudents(getStoredData('aegis_students', []).filter(s => !isDummyStudent(s))));
   const [allocations, setAllocations] = useState(() => dedupeAllocations(getStoredData('aegis_allocations', []).filter(a => !isDummyStudent(a))));
+  const [bookings, setBookings] = useState(() => getStoredData('aegis_bookings', []));
   const [feeSummary, setFeeSummary] = useState(() => getStoredData('aegis_fee_summary', []));
   const [feePayments, setFeePayments] = useState(() => getStoredData('aegis_fee_payments', []));
   const [complaints, setComplaints] = useState(() => getStoredData('aegis_complaints', []));
@@ -148,6 +150,8 @@ export function AppContent() {
         fetchAllData();
       }, 30000);
       return () => clearInterval(interval);
+    } else {
+      setCurrentView('dashboard');
     }
   }, [admin]);
 
@@ -320,6 +324,15 @@ export function AppContent() {
   };
 
   // Student Handlers
+  const handleApplyBooking = async (bookingData) => {
+    setBookings(prev => {
+      const updated = [bookingData, ...prev];
+      setStoredData('aegis_bookings', updated);
+      return updated;
+    });
+    return { success: true };
+  };
+
   const handleAddStudent = async (studentData) => {
     const newSt = {
       student_id: Date.now(),
@@ -1157,6 +1170,14 @@ export function AppContent() {
               rooms={rooms}
               searchTerm={globalSearch}
               onAllocateRoom={handleAllocateRoom}
+            />
+          )}
+
+          {currentView === 'bookings' && (
+            <BookingsView
+              bookings={bookings}
+              onApplyBooking={handleApplyBooking}
+              searchTerm={globalSearch}
             />
           )}
 
