@@ -15,7 +15,8 @@ import {
   LogOut,
   X,
   ShieldAlert,
-  Bookmark
+  Bookmark,
+  TrendingUp
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -27,6 +28,7 @@ export function Sidebar({ currentView, setCurrentView = () => {}, counts = {}, m
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'rooms', label: 'Hostels & Rooms', icon: Building2 },
     { id: 'students', label: 'Student Directory', icon: Users },
     { id: 'allocations', label: 'Room Allocations', icon: KeyRound },

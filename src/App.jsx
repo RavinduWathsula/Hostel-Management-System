@@ -4,6 +4,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { AuthView } from './views/AuthView';
 import { DashboardView } from './views/DashboardView';
+import { AnalyticsView } from './views/AnalyticsView';
 import { RoomsView } from './views/RoomsView';
 import { StudentsView } from './views/StudentsView';
 import { AllocationsView } from './views/AllocationsView';
@@ -1119,6 +1120,19 @@ export function AppContent() {
                 if (action === 'attendance') setCurrentView('attendance');
                 if (action === 'visitors') setCurrentView('visitors');
               }}
+            />
+          )}
+
+          {currentView === 'analytics' && (
+            <AnalyticsView
+              stats={stats}
+              hostels={hostels}
+              rooms={rooms}
+              students={students}
+              allocations={allocations}
+              complaints={complaints}
+              payments={feePayments}
+              staff={staff}
             />
           )}
 

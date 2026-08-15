@@ -55,37 +55,68 @@ export function DashboardView({
     return acc;
   }, {});
 
-  // Prepare recent activity
+  // Helper to format date nicely
+  const formatTime = (dateStr) => {
+    if (!dateStr || dateStr === 'Recent' || dateStr === 'Verified' || dateStr === 'Pending' || dateStr === 'Resolved' || dateStr === 'Active') {
+      return dateStr;
+    }
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      
+      const now = new Date();
+      const diffMs = now - d;
+      const diffSecs = Math.floor(diffMs / 1000);
+      const diffMins = Math.floor(diffSecs / 60);
+      const diffHrs = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHrs / 24);
+      
+      if (diffSecs < 60) return 'Just now';
+      if (diffMins < 60) return `${diffMins} min ago`;
+      if (diffHrs < 24) return `${diffHrs} hours ago`;
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch(e) {
+      return dateStr;
+    }
+  };
+
+  // Prepare recent activity (combine all lists, sort by latest, take top 4)
   const recentActivities = [];
   
-  (allocations || []).slice(0, 3).forEach(alloc => {
+  (allocations || []).forEach(alloc => {
     recentActivities.push({
       id: `alloc-${alloc.id || alloc.allocation_id || Math.random()}`,
       title: alloc.student_name || 'Resident',
       description: `Allocated Room ${alloc.room_number || ''} (Bed ${alloc.bed_number || ''})`,
-      time: alloc.allocated_date || 'Recent',
+      time: formatTime(alloc.allocated_date || new Date().toISOString()),
+      status: alloc.status,
       iconColor: 'bg-emerald-400',
       timestamp: new Date(alloc.allocated_date || Date.now()).getTime()
     });
   });
 
-  (payments || []).slice(0, 3).forEach(payment => {
+  (payments || []).forEach(payment => {
     recentActivities.push({
       id: `pay-${payment.id || payment.payment_id || Math.random()}`,
       title: payment.fee_type || 'Fee Payment',
       description: `Collected ${formatLKR(payment.amount || 0)}`,
-      time: payment.payment_date || 'Verified',
+      time: formatTime(payment.payment_date || new Date().toISOString()),
+      status: payment.status,
       iconColor: 'bg-purple-400',
       timestamp: new Date(payment.payment_date || Date.now()).getTime()
     });
   });
 
-  (complaints || []).slice(0, 3).forEach(comp => {
+  (complaints || []).forEach(comp => {
     recentActivities.push({
       id: `comp-${comp.id || comp.complaint_id || Math.random()}`,
       title: comp.student_name || 'Resident',
       description: `Logged issue: ${comp.title || comp.category || 'Complaint'}`,
-      time: comp.status || 'Pending',
+      time: formatTime(comp.created_at || new Date().toISOString()),
+      status: comp.status,
       iconColor: 'bg-amber-400',
       timestamp: new Date(comp.created_at || Date.now()).getTime()
     });
@@ -415,7 +446,14 @@ export function DashboardView({
                       <span className="font-bold text-slate-200 light:text-slate-800 block">{activity.title}</span>
                       <span className="text-slate-400">{activity.description}</span>
                     </div>
-                    <span className="text-[10px] text-slate-500 font-mono">{activity.time}</span>
+                    <div className="flex flex-col items-end gap-1">
+                      {activity.status && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 light:bg-slate-200 text-slate-300 light:text-slate-600">
+                          {activity.status}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-slate-500 font-medium">{activity.time}</span>
+                    </div>
                   </div>
                 ))
               ) : (
