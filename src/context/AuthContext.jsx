@@ -163,12 +163,8 @@ export function AuthProvider({ children }) {
       throw new Error(data.error || data.message || 'Registration failed');
     }
 
-    const userData = data.user || data.admin;
-    setAdmin(userData);
-    if (data.token) {
-      sessionStorage.setItem('aegis_token', data.token);
-    }
-    sessionStorage.setItem('aegis_user', JSON.stringify(userData));
+    // We do not auto-login after registration as per user request.
+    // The user must manually log in after successful registration.
     return data;
   };
 

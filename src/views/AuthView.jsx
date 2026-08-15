@@ -41,6 +41,10 @@ export function AuthView() {
     setLoading(true);
     try {
       await register(registerForm);
+      // On success, switch to login mode and pre-fill username
+      setIsRegisterMode(false);
+      setLoginForm((prev) => ({ ...prev, username: registerForm.username }));
+      // Optional: We could set a success message, but setting mode to false is sufficient
     } catch (err) {
       setError(err.message || 'Registration failed');
     } finally {
