@@ -41,9 +41,17 @@ export function AuthView() {
     setLoading(true);
     try {
       await register(registerForm);
-      // On success, switch to login mode and pre-fill username
+      // On success, switch to login mode and clear forms
       setIsRegisterMode(false);
-      setLoginForm((prev) => ({ ...prev, username: registerForm.username }));
+      setLoginForm({ username: '', password: '' });
+      setRegisterForm({
+        full_name: '',
+        username: '',
+        email: '',
+        password: '',
+        confirm_password: '',
+        role: 'Admin'
+      });
       // Optional: We could set a success message, but setting mode to false is sufficient
     } catch (err) {
       setError(err.message || 'Registration failed');
@@ -132,7 +140,18 @@ export function AuthView() {
               <span className="text-xs text-slate-400">Need an administrator account? </span>
               <button
                 type="button"
-                onClick={() => { setError(''); setIsRegisterMode(true); }}
+                onClick={() => { 
+                  setError(''); 
+                  setIsRegisterMode(true); 
+                  setRegisterForm({
+                    full_name: '',
+                    username: '',
+                    email: '',
+                    password: '',
+                    confirm_password: '',
+                    role: 'Admin'
+                  });
+                }}
                 className="text-xs font-bold text-purple-400 hover:underline"
               >
                 Register Here
@@ -236,7 +255,11 @@ export function AuthView() {
               <span className="text-xs text-slate-400">Already registered? </span>
               <button
                 type="button"
-                onClick={() => { setError(''); setIsRegisterMode(false); }}
+                onClick={() => { 
+                  setError(''); 
+                  setIsRegisterMode(false); 
+                  setLoginForm({ username: '', password: '' });
+                }}
                 className="text-xs font-bold text-purple-400 hover:underline"
               >
                 Sign In
