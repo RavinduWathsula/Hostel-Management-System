@@ -391,7 +391,6 @@ export function AppContent() {
   };
 
   const handleDeleteStudent = async (id) => {
-    if (!window.confirm('Are you sure you want to remove this resident?')) return;
     const targetStudent = students.find(s => String(s.student_id || s.id) === String(id));
     const targetAdm = targetStudent ? targetStudent.admission_no : null;
 
