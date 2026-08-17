@@ -91,7 +91,7 @@ export function Sidebar({ currentView, setCurrentView = () => {}, counts = {}, m
                   setCurrentView(item.id);
                   setMobileOpen(false);
                 }}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 focus:outline-none ${
                   isActive
                     ? 'bg-gradient-to-r from-blue-500/15 to-purple-500/10 border border-blue-500/30 text-blue-500 dark:text-blue-400 shadow-sm'
                     : 'text-slate-400 light:text-slate-600 hover:bg-dark-hover light:hover:bg-slate-100 hover:text-slate-200 light:hover:text-slate-900'
@@ -118,7 +118,7 @@ export function Sidebar({ currentView, setCurrentView = () => {}, counts = {}, m
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-dashed border-dark-border light:border-slate-300 text-slate-400 light:text-slate-600 hover:bg-dark-hover light:hover:bg-slate-100 transition-colors text-sm font-semibold cursor-pointer"
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-dashed border-dark-border light:border-slate-300 text-slate-400 light:text-slate-600 hover:bg-dark-hover light:hover:bg-slate-100 transition-colors text-sm font-semibold cursor-pointer focus:outline-none"
           >
             <div className="flex items-center gap-3">
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-purple-600" />}
@@ -132,7 +132,7 @@ export function Sidebar({ currentView, setCurrentView = () => {}, counts = {}, m
           {/* Logout Button */}
           <button
             onClick={() => setShowLogoutModal(true)}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-colors text-sm font-semibold cursor-pointer"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-colors text-sm font-semibold cursor-pointer focus:outline-none"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign Out</span>
